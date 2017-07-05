@@ -60,10 +60,7 @@ class Host(models.Model):
                 telnet_info = 'Invalid telnet user or password'
             else:
                 host_ports = Port.objects.filter(host=self)
-                if host_ports.count() <= 0:
-                    telnet_status = Host.DANGER
-                    telnet_info = 'No registered port found'
-                else:
+                if host_ports.count() > 0:
                     for port in host_ports:
                         tn_command = 'show port status {0}'.format(port.number)
                         tn.write(tn_command.encode('ascii') + b"\n")
@@ -104,7 +101,7 @@ class Host(models.Model):
                 self.last_status_change = now
                 # Add new log
                 Log.objects.create(host=self, status=status_tmp,
-                                   status_info=status_info_tmp, status_change=self.now)
+                                   status_info=status_info_tmp, status_change=now)
                 # Remove old logs based on MAX_LOG_LINES
                 Log.objects.filter(pk__in=Log.objects.filter(host=self).order_by('-status_change')
                                    .values_list('pk')[MAX_LOG_LINES:]).delete()
