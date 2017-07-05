@@ -2,8 +2,8 @@ from django.core.management.base import BaseCommand
 from django.utils import timezone
 from django.db.utils import DatabaseError
 from monitor.models import Log, Host, Port
-from monitor.settings.base import DAYS_FROM_DANGER_TO_WARNING, WAIT_FOR_NEXT, MAX_LOG_LINES
-from monitor.settings.base import USER, PASSWORD
+from monitor.config.base import DAYS_FROM_DANGER_TO_WARNING, WAIT_FOR_NEXT, MAX_LOG_LINES
+from monitor.config.base import USER, PASSWORD
 from telnetlib import Telnet
 import datetime
 import logging
@@ -17,27 +17,28 @@ class Command(BaseCommand):
     help = 'Monitor Daemon for Monitor hosts'
 
     logger = logging.getLogger(__name__)
-    status_tmp = ''
-    status_info_tmp = ''
     now = None
 
     def status_handler(self, host):
+        self.now = timezone.now()
         # if already whithout connection in 5 (default) or more days, 'warning' status
-        if self.status_tmp == Host.DANGER and host.status in (Host.DANGER, Host.WARNING) and \
+        status_tmp, status_info_tmp = host.telnet()
+
+        if status_tmp == Host.DANGER and host.status in (Host.DANGER, Host.WARNING) and \
                 host.last_status_change <= (self.now - datetime.timedelta(days=DAYS_FROM_DANGER_TO_WARNING)):
-            self.status_tmp = Host.WARNING
+           status_tmp = Host.WARNING
 
         # Update host if status changed
-        if host.status != self.status_tmp or host.status_info != self.status_info_tmp:
+        if host.status != status_tmp or host.status_info != status_info_tmp:
             self.logger.warning('Status and/or status info changed to host {0}'.format(host.ipv4))
-            host.status = self.status_tmp
-            host.status_info = self.status_info_tmp
+            host.status = status_tmp
+            host.status_info = status_info_tmp
             # Don't change last updated time for warning changes
-            if self.status_tmp != Host.WARNING:
+            if status_tmp != Host.WARNING:
                 host.last_status_change = self.now
                 # Add new log
-                Log.objects.create(host=host, status=self.status_tmp,
-                                   status_info=self.status_info_tmp, status_change=self.now)
+                Log.objects.create(host=host, status=status_tmp,
+                                   status_info=status_info_tmp, status_change=self.now)
                 # Remove old logs based on MAX_LOG_LINES
                 Log.objects.filter(pk__in=Log.objects.filter(host=host).order_by('-status_change')
                                    .values_list('pk')[MAX_LOG_LINES:]).delete()
@@ -98,15 +99,15 @@ class Command(BaseCommand):
         return is_pinging
 
     def check_host(self, host):
-        self.status_tmp = ''
-        self.status_info_tmp = ''
-        self.now = timezone.now()
-        host.last_check = self.now
-        if self.ping(host):
-            host_ports = Port.objects.filter(host=host)
-            if host_ports.count() > 0:
-                self.logger.info('Registered ports found. Telnet connection started to {0}'.format(host.ipv4))
-                self.telnet(host, host_ports)
+#        self.status_tmp = ''
+#        self.status_info_tmp = ''
+#        self.now = timezone.now()
+#        host.last_check = self.now
+#        if self.ping(host):
+#            host_ports = Port.objects.filter(host=host)
+#            if host_ports.count() > 0:
+#                self.logger.info('Registered ports found. Telnet connection started to {0}'.format(host.ipv4))
+#                self.telnet(host, host_ports)
         self.status_handler(host)
         self.save_db(host)
 
