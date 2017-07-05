@@ -1,15 +1,16 @@
 from django.db import models
+from django.db.utils import DatabaseError
 from django.utils import timezone
 from .config.base import USER, PASSWORD
-from .config.base import DAYS_FROM_DANGER_TO_WARNING, WAIT_FOR_NEXT, MAX_LOG_LINES
+from .config.base import DAYS_FROM_DANGER_TO_WARNING, MAX_LOG_LINES
+import datetime
 import subprocess
 import telnetlib
 import re
 
 class HostManager(models.Manager):
     def create_host(self, name, description, ipv4):
-        host = self.create(name=name, description=description, ipv4=ipv4)
-        return host
+        return self.create(name=name, description=description, ipv4=ipv4)
 
 class Host(models.Model):
     name = models.CharField(max_length=200)
@@ -84,14 +85,45 @@ class Host(models.Model):
 
         return telnet_status, telnet_info
 
+
+    def status_handler(self):
+        now = timezone.now()
+        # if already whithout connection in 5 (default) or more days, 'warning' status
+        status_tmp, status_info_tmp = self.telnet()
+
+        if status_tmp == self.DANGER and self.status in (self.DANGER, self.WARNING) and \
+                self.last_status_change <= (now - datetime.timedelta(days=DAYS_FROM_DANGER_TO_WARNING)):
+           status_tmp = self.WARNING
+
+        # Update host if status changed
+        if self.status != status_tmp or self.status_info != status_info_tmp:
+            self.status = status_tmp
+            self.status_info = status_info_tmp
+            # Don't change last updated time for warning changes
+            if status_tmp != self.WARNING:
+                self.last_status_change = now
+                # Add new log
+                Log.objects.create(host=self, status=status_tmp,
+                                   status_info=status_info_tmp, status_change=self.now)
+                # Remove old logs based on MAX_LOG_LINES
+                Log.objects.filter(pk__in=Log.objects.filter(host=self).order_by('-status_change')
+                                   .values_list('pk')[MAX_LOG_LINES:]).delete()
+        # If the host still in the db, save it
+        try:
+            # Update only time and status fields
+            self.save(update_fields=['last_check', 'last_status_change', 'status', 'status_info'])
+        except DatabaseError as err:
+            pass
+
+
     def __str__(self):
         return self.name
 
 class LogManager(models.Manager):
     def create_log(self, host, status, status_change, status_info):
-        log = self.create(host=host, status=status, status_change=status_change,
+        return self.create(host=host, status=status, status_change=status_change,
                           status_info=status_info)
-        return log
+
 
 class Log(models.Model):
     host = models.ForeignKey(Host, on_delete=models.CASCADE)
@@ -103,10 +135,11 @@ class Log(models.Model):
     def __str__(self):
         return self.host.name
 
+
 class PortManager(models.Manager):
     def create_port(self, host, number):
-        port = self.create(host=host, number=number)
-        return port
+       return self.create(host=host, number=number)
+
 
 class Port(models.Model):
     host = models.ForeignKey(Host, on_delete=models.CASCADE)
