@@ -8,9 +8,6 @@ import subprocess
 import telnetlib
 import re
 
-class HostManager(models.Manager):
-    def create_host(self, name, description, ipv4):
-        return self.create(name=name, description=description, ipv4=ipv4)
 
 class Host(models.Model):
     name = models.CharField(max_length=200)
@@ -34,7 +31,15 @@ class Host(models.Model):
         (DANGER, 'negative'),
     )
     status = models.IntegerField(choices=STATUS_CHOICES, default=DEFAULT)
-    objects = HostManager()
+
+    @classmethod
+    def create(cls, name, description, ipv4):
+        host = cls(
+                    name=name,
+                    description=description,
+                    ipv4=ipv4
+                  )
+        return host
 
     @property
     def isalive(self):
@@ -116,18 +121,22 @@ class Host(models.Model):
     def __str__(self):
         return self.name
 
-class LogManager(models.Manager):
-    def create_log(self, host, status, status_change, status_info):
-        return self.create(host=host, status=status, status_change=status_change,
-                          status_info=status_info)
-
 
 class Log(models.Model):
     host = models.ForeignKey(Host, on_delete=models.CASCADE)
     status = models.IntegerField(choices=Host.STATUS_CHOICES, default=Host.DEFAULT)
     status_change = models.DateTimeField()
     status_info = models.CharField(max_length=200, blank=True, null=True)
-    objects = LogManager()
+
+    @classmethod
+    def create(cls, host, status, status_change, status_info):
+        log = cls(
+                   host=host,
+                   status=status,
+                   status_change=status_change,
+                   status_info=status_info,
+                 )
+        return log
 
     def __str__(self):
         return self.host.name
@@ -141,7 +150,14 @@ class PortManager(models.Manager):
 class Port(models.Model):
     host = models.ForeignKey(Host, on_delete=models.CASCADE)
     number = models.CharField(max_length=20)
-    objects = PortManager()
+
+    @classmethod
+    def create(cls, host, number):
+        port = cls(
+                    host=host,
+                    number=number,
+                  )
+        return port
 
     def __str__(self):
         return self.number
