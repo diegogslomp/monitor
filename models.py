@@ -88,7 +88,7 @@ class Host(models.Model):
         return output_status, output_info
 
 
-    def check_status(self):
+    def update_status(self):
         now = timezone.now()
         self.last_check = now
         # if already whithout connection in 5 (default) or more days, 'warning' status
