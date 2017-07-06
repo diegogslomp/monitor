@@ -11,7 +11,7 @@ class Command(BaseCommand):
     def loop(self):
         while True:
             for host in Host.objects.all():
-                host.status_handler()
+                host.check_status()
                 time.sleep(WAIT_FOR_NEXT)
 
     def handle(self, *args, **options):

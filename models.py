@@ -37,7 +37,7 @@ class Host(models.Model):
         host = cls(
                     name=name,
                     description=description,
-                    ipv4=ipv4
+                    ipv4=ipv4,
                   )
         return host
 
@@ -46,26 +46,26 @@ class Host(models.Model):
         return  not subprocess.call('ping {0} -c 1 -W 2 -q > /dev/null 2>&1'\
                                     .format(self.ipv4), shell=True)
 
-    def telnet(self):
+    def check_connection(self):
         if not self.isalive:
-            telnet_status = self.DANGER
-            telnet_info = 'Connection Lost'
+            output_status = self.DANGER
+            output_info = 'Connection Lost'
         else:
-            telnet_status = self.SUCCESS
-            telnet_info = 'Connected'
-            tn = telnetlib.Telnet(self.ipv4)
-            tn.read_until(b"Username:")
-            tn.write(USER.encode('ascii') + b"\n")
-            tn.read_until(b"Password:")
-            tn.write(PASSWORD.encode('ascii') + b"\n")
-            # Wait prompt '->' for successful login or 'Username' for wrong credentials
-            match_object = tn.expect([b"->", b"Username:"])[1]
-            if match_object.group(0) == b"Username:":
-                telnet_status = Host.DANGER
-                telnet_info = 'Invalid telnet user or password'
-            else:
-                host_ports = Port.objects.filter(host=self)
-                if host_ports.count() > 0:
+            output_status = self.SUCCESS
+            output_info = 'Connected'
+            host_ports = Port.objects.filter(host=self)
+            if host_ports.count() > 0:
+                tn = telnetlib.Telnet(self.ipv4)
+                tn.read_until(b"Username:")
+                tn.write(USER.encode('ascii') + b"\n")
+                tn.read_until(b"Password:")
+                tn.write(PASSWORD.encode('ascii') + b"\n")
+                # Wait prompt '->' for successful login or 'Username' for wrong credentials
+                match_object = tn.expect([b"->", b"Username:"])[1]
+                if match_object.group(0) == b"Username:":
+                    output_status = Host.DANGER
+                    output_info = 'Invalid telnet user or password'
+                else:
                     for port in host_ports:
                         tn_command = 'show port status {0}'.format(port.number)
                         tn.write(tn_command.encode('ascii') + b"\n")
@@ -73,25 +73,26 @@ class Host(models.Model):
                     # Filter telnet output lines
                     for line in tn.read_all().decode('ascii').lower().replace('\r', '').split('\n'):
                         if re.search(r'[no ,in]valid', line):
-                            telnet_status = self.DANGER
-                            telnet_info = 'Invalid port registered or module is Down'
+                            output_status = self.DANGER
+                            output_info = 'Invalid port registered or module is Down'
                             continue
                         for port in host_ports:
                             if re.search(r'{0}.*down'.format(port.number), line):
-                                telnet_status = self.DANGER
+                                output_status = self.DANGER
                                 msg = 'Port {0} ({1}) is Down'.format(port.number, line.split()[1])
-                                if telnet_info == 'Connected':
-                                    telnet_info = msg
+                                if output_info == 'Connected':
+                                    output_info = msg
                                 else:
-                                    telnet_info += ', {0}'.format(msg)
+                                    output_info += ', {0}'.format(msg)
 
-        return telnet_status, telnet_info
+        return output_status, output_info
 
 
-    def status_handler(self):
+    def check_status(self):
         now = timezone.now()
+        self.last_check = now
         # if already whithout connection in 5 (default) or more days, 'warning' status
-        status_tmp, status_info_tmp = self.telnet()
+        status_tmp, status_info_tmp = self.check_connection()
 
         if status_tmp == self.DANGER and self.status in (self.DANGER, self.WARNING) and \
                 self.last_status_change <= (now - datetime.timedelta(days=DAYS_FROM_DANGER_TO_WARNING)):
@@ -140,11 +141,6 @@ class Log(models.Model):
 
     def __str__(self):
         return self.host.name
-
-
-class PortManager(models.Manager):
-    def create_port(self, host, number):
-       return self.create(host=host, number=number)
 
 
 class Port(models.Model):
