@@ -32,14 +32,6 @@ class Host(models.Model):
     )
     status = models.IntegerField(choices=STATUS_CHOICES, default=DEFAULT)
 
-    @classmethod
-    def create(cls, name, description, ipv4):
-        host = cls(
-                    name=name,
-                    description=description,
-                    ipv4=ipv4,
-                  )
-        return host
 
     @property
     def isalive(self):
@@ -88,36 +80,42 @@ class Host(models.Model):
         return output_status, output_info
 
 
+    def update_logs(self, status_tmp, status_info_tmp, now):
+        # Add new log
+        Log.objects.create(host=self, status=status_tmp,
+                           status_info=status_info_tmp, status_change=now)
+        # Remove old logs based on MAX_LOG_LINES
+        Log.objects.filter(pk__in=Log.objects.filter(host=self).order_by('-status_change')
+                           .values_list('pk')[MAX_LOG_LINES:]).delete()
+
+
     def update_status(self):
         now = timezone.now()
         self.last_check = now
-        # if already whithout connection in 5 (default) or more days, 'warning' status
         status_tmp, status_info_tmp = self.check_connection()
 
+        # if already whithout connection in 5 (default) or more days, 'warning' status
         if status_tmp == self.DANGER and self.status in (self.DANGER, self.WARNING) and \
                 self.last_status_change <= (now - datetime.timedelta(days=DAYS_FROM_DANGER_TO_WARNING)):
            status_tmp = self.WARNING
 
         # Update host if status changed
-        if self.status != status_tmp or self.status_info != status_info_tmp:
+        if self.status_info != status_info_tmp:
             self.status = status_tmp
             self.status_info = status_info_tmp
+
             # Don't change last updated time for warning changes
             if status_tmp != self.WARNING:
                 self.last_status_change = now
-                # Add new log
-                Log.objects.create(host=self, status=status_tmp,
-                                   status_info=status_info_tmp, status_change=now)
-                # Remove old logs based on MAX_LOG_LINES
-                Log.objects.filter(pk__in=Log.objects.filter(host=self).order_by('-status_change')
-                                   .values_list('pk')[MAX_LOG_LINES:]).delete()
+
+            self.update_logs(status_tmp=status_tmp, status_info_tmp=status_info_tmp, now=now)
+
         # If the host still in the db, save it
         try:
             # Update only time and status fields
             self.save(update_fields=['last_check', 'last_status_change', 'status', 'status_info'])
         except DatabaseError as err:
             pass
-
 
     def __str__(self):
         return self.name
@@ -129,16 +127,6 @@ class Log(models.Model):
     status_change = models.DateTimeField()
     status_info = models.CharField(max_length=200, blank=True, null=True)
 
-    @classmethod
-    def create(cls, host, status, status_change, status_info):
-        log = cls(
-                   host=host,
-                   status=status,
-                   status_change=status_change,
-                   status_info=status_info,
-                 )
-        return log
-
     def __str__(self):
         return self.host.name
 
@@ -146,14 +134,6 @@ class Log(models.Model):
 class Port(models.Model):
     host = models.ForeignKey(Host, on_delete=models.CASCADE)
     number = models.CharField(max_length=20)
-
-    @classmethod
-    def create(cls, host, number):
-        port = cls(
-                    host=host,
-                    number=number,
-                  )
-        return port
 
     def __str__(self):
         return self.number
