@@ -80,10 +80,10 @@ class Host(models.Model):
         return output_status, output_info
 
 
-    def update_logs(self, status_tmp, status_info_tmp, now):
+    def update_logs(self, status, status_info, now):
         # Add new log
-        Log.objects.create(host=self, status=status_tmp,
-                           status_info=status_info_tmp, status_change=now)
+        Log.objects.create(host=self, status=status,
+                           status_info=status_info, status_change=now)
         # Remove old logs based on MAX_LOG_LINES
         Log.objects.filter(pk__in=Log.objects.filter(host=self).order_by('-status_change')
                            .values_list('pk')[MAX_LOG_LINES:]).delete()
@@ -92,29 +92,28 @@ class Host(models.Model):
     def update_status(self):
         now = timezone.now()
         self.last_check = now
-        status_tmp, status_info_tmp = self.check_connection()
+        self.status, status_info_tmp = self.check_connection()
 
+        delta_limit_to_warning_status = now - datetime.timedelta(days=DAYS_FROM_DANGER_TO_WARNING)
         # if already whithout connection in 5 (default) or more days, 'warning' status
-        if status_tmp == self.DANGER and self.status in (self.DANGER, self.WARNING) and \
-                self.last_status_change <= (now - datetime.timedelta(days=DAYS_FROM_DANGER_TO_WARNING)):
-           status_tmp = self.WARNING
+        if self.status == self.DANGER and self.last_status_change <= delta_limit_to_warning_status:
+           self.status = self.WARNING
 
-        # Update host if status changed
+        # Don't need to change updated time for warning changes
+        if self.status != self.WARNING:
+            self.last_status_change = now
+
+        # Update logs only if status info changed
         if self.status_info != status_info_tmp:
-            self.status = status_tmp
             self.status_info = status_info_tmp
-
-            # Don't change last updated time for warning changes
-            if status_tmp != self.WARNING:
-                self.last_status_change = now
-
-            self.update_logs(status_tmp=status_tmp, status_info_tmp=status_info_tmp, now=now)
+            self.update_logs(status=self.status, status_info=self.status_info, now=now)
 
         # If the host still in the db, save it
         try:
             # Update only time and status fields
             self.save(update_fields=['last_check', 'last_status_change', 'status', 'status_info'])
         except DatabaseError as err:
+            # TODO: Add logger to catch
             pass
 
     def __str__(self):
