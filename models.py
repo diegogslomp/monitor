@@ -39,10 +39,12 @@ class Host(models.Model):
                                     .format(self.ipv4), shell=True)
 
     def check_connection(self):
-        if not self.isalive:
-            output_status = self.DANGER
-            output_info = 'Connection Lost'
-        else:
+        '''Ping host, then telnet if there are registered ports'''
+
+        output_status = self.DANGER
+        output_info = 'Connection Lost'
+
+        if self.isalive:
             output_status = self.SUCCESS
             output_info = 'Connected'
             host_ports = Port.objects.filter(host=self)
@@ -81,15 +83,15 @@ class Host(models.Model):
 
 
     def update_logs(self, status, status_info, now):
-        # Add new log
+        '''Add new log and remove old logs based on MAX_LOG_LINES'''
         Log.objects.create(host=self, status=status,
                            status_info=status_info, status_change=now)
-        # Remove old logs based on MAX_LOG_LINES
         Log.objects.filter(pk__in=Log.objects.filter(host=self).order_by('-status_change')
                            .values_list('pk')[MAX_LOG_LINES:]).delete()
 
 
     def update_status(self):
+        '''The 'main' function of monitord, check/update host and logs'''
         now = timezone.now()
         self.last_check = now
         self.status, status_info_tmp = self.check_connection()
@@ -120,6 +122,7 @@ class Host(models.Model):
 
 
 class Log(models.Model):
+    '''Logs showed in host detail view'''
     host = models.ForeignKey(Host, on_delete=models.CASCADE)
     status = models.IntegerField(choices=Host.STATUS_CHOICES, default=Host.DEFAULT)
     status_change = models.DateTimeField()
@@ -130,6 +133,7 @@ class Log(models.Model):
 
 
 class Port(models.Model):
+    '''Ports used to check status using telnet'''
     host = models.ForeignKey(Host, on_delete=models.CASCADE)
     number = models.CharField(max_length=20)
 
