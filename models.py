@@ -99,14 +99,13 @@ class Host(models.Model):
         if self.status == self.DANGER and self.last_status_change <= delta_limit_to_warning_status:
            self.status = self.WARNING
 
-        # Don't need to change updated time for warning changes
-        if self.status != self.WARNING:
-            self.last_status_change = now
-
-        # Update logs only if status info changed
+        #  if status info changed, update update status and logs
         if self.status_info != status_info_tmp:
             self.status_info = status_info_tmp
             self.update_logs(status=self.status, status_info=self.status_info, now=now)
+            # Don't change updated time for warning changes
+            if self.status != self.WARNING:
+                self.last_status_change = now
 
         # If the host still in the db, save it
         try:
