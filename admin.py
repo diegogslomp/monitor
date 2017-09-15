@@ -8,12 +8,12 @@ class PortInLines (admin.TabularInline):
 
 class LogInLines (admin.TabularInline):
     model = Log
-    extra = 0
+    extra = 1
 
 class HostAdmin(admin.ModelAdmin):
     fieldsets = [
-            (None, {'fields': ['name', 'description', 'ipv4']}),
-#        ('Daemon Managed Status', {'fields': ['last_check', 'last_status_change', 'status_info'], 'classes': ['collapse']}),
+        (None, {'fields': ['name', 'description', 'ipv4', 'status', 'status_info', 'last_status_change']}),
+        ('Daemon Managed Status', {'fields': ['status', 'status_info', 'last_status_change', 'last_check'], 'classes': ['collapse']}),
     ]
     list_display = ('name', 'description', 'ipv4', 'status')
     search_fields = ['name', 'description', 'ipv4', 'status']

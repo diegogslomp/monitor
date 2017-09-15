@@ -94,20 +94,20 @@ class Host(models.Model):
         '''The 'main' function of monitord, check/update host and logs'''
         now = timezone.now()
         self.last_check = now
-        self.status, status_info_tmp = self.check_connection()
+        status_tmp, status_info_tmp = self.check_connection()
 
-        delta_limit_to_warning_status = now - datetime.timedelta(days=DAYS_FROM_DANGER_TO_WARNING)
-        # if already whithout connection in 5 (default) or more days, 'warning' status
-        if self.status == self.DANGER and self.last_status_change <= delta_limit_to_warning_status:
-           self.status = self.WARNING
-
-        #  if status info changed, update update status and logs
-        if self.status_info != status_info_tmp:
+        #  if status info changed, update status and logs
+        if status_info_tmp != self.status_info:
+            self.status = status_tmp
             self.status_info = status_info_tmp
+            self.last_status_change = now
             self.update_logs(status=self.status, status_info=self.status_info, now=now)
-            # Don't change updated time for warning changes
-            if self.status != self.WARNING:
-                self.last_status_change = now
+        # if only status changed, got from danger to warning
+        elif status_tmp != self.status:
+            delta_limit_to_warning_status = now - datetime.timedelta(days=DAYS_FROM_DANGER_TO_WARNING)
+            # if already whithout connection in 5 (default) or more days, 'warning' status
+            if status_tmp == self.DANGER and self.last_status_change <= delta_limit_to_warning_status:
+                self.status = self.WARNING
 
         # If the host still in the db, save it
         try:
