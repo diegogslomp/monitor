@@ -82,10 +82,10 @@ class Host(models.Model):
         return output_status, output_info
 
 
-    def update_logs(self, status, status_info, now):
+    def update_logs(self):
         '''Add new log and remove old logs based on MAX_LOG_LINES'''
-        Log.objects.create(host=self, status=status,
-                           status_info=status_info, status_change=now)
+        Log.objects.create(host=self, status=self.status,
+                           status_info=self.status_info, status_change=self.last_status_change)
         Log.objects.filter(pk__in=Log.objects.filter(host=self).order_by('-status_change')
                            .values_list('pk')[MAX_LOG_LINES:]).delete()
 
@@ -94,6 +94,8 @@ class Host(models.Model):
         '''The 'main' function of monitord, check/update host and logs'''
         now = timezone.now()
         self.last_check = now
+        # Only update changed fields in DB
+        updated_fields = ['last_check']
         status_tmp, status_info_tmp = self.check_connection()
 
         #  if status info changed, update status and logs
@@ -101,18 +103,22 @@ class Host(models.Model):
             self.status = status_tmp
             self.status_info = status_info_tmp
             self.last_status_change = now
-            self.update_logs(status=self.status, status_info=self.status_info, now=now)
+            updated_fields.extend(['last_status_change', 'status', 'status_info'])
+            self.update_logs()
+
         # if only status changed, got from danger to warning
         elif status_tmp != self.status:
+
             delta_limit_to_warning_status = now - datetime.timedelta(days=DAYS_FROM_DANGER_TO_WARNING)
             # if already whithout connection in 5 (default) or more days, 'warning' status
             if status_tmp == self.DANGER and self.last_status_change <= delta_limit_to_warning_status:
                 self.status = self.WARNING
+                updated_fields.extend(['status'])
 
         # If the host still in the db, save it
         try:
             # Update only time and status fields
-            self.save(update_fields=['last_check', 'last_status_change', 'status', 'status_info'])
+            self.save(update_fields=updated_fields)
         except DatabaseError as err:
             # TODO: Add logger to catch
             pass
