@@ -12,7 +12,7 @@ class LogInLines (admin.TabularInline):
 
 class HostAdmin(admin.ModelAdmin):
     fieldsets = [
-        (None, {'fields': ['name', 'description', 'ipv4', 'status', 'status_info', 'last_status_change']}),
+        (None, {'fields': ['name', 'description', 'ipv4']}),
         ('Daemon Managed Status', {'fields': ['status', 'status_info', 'last_status_change', 'last_check'], 'classes': ['collapse']}),
     ]
     list_display = ('name', 'description', 'ipv4', 'status')
