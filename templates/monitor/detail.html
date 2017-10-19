@@ -5,6 +5,9 @@
 {% block content %}
 <div class="ui {{ host.get_status_display }} message">
     <div class="ui segment">
+        <a class="ui {{ host.get_status_display }} basic button" href="{% url 'monitor:index' %}">Return</a>
+    </div>
+    <div class="ui segment">
         <h4 class="ui header">
             <i class="bar chart icon"></i>
             Description
@@ -54,7 +57,4 @@
         </tbody>
         </table>
     </div>
-    <div class="ui segment">
-        <a class="ui {{ host.get_status_display }} basic button" href="{% url 'monitor:index' %}">Return</a>
-    </div>
-{% endblock %}
+ {% endblock %}

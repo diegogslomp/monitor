@@ -95,7 +95,7 @@ class Host(models.Model):
         now = timezone.now()
         self.last_check = now
         # Only update changed fields in DB
-        updated_fields = ['last_check']
+        update_fields = ['last_check']
         status_tmp, status_info_tmp = self.check_connection()
 
         #  if status info changed, update status and logs
@@ -103,22 +103,22 @@ class Host(models.Model):
             self.status = status_tmp
             self.status_info = status_info_tmp
             self.last_status_change = now
-            updated_fields.extend(['last_status_change', 'status', 'status_info'])
+            update_fields.extend(['last_status_change', 'status', 'status_info'])
             self.update_logs()
 
-        # if only status changed, got from danger to warning
-        elif status_tmp != self.status:
+        # if only status changed, check if change to danger to warning
+        elif status_tmp == Host.DANGER:
 
             delta_limit_to_warning_status = now - datetime.timedelta(days=DAYS_FROM_DANGER_TO_WARNING)
             # if already whithout connection in 5 (default) or more days, 'warning' status
             if status_tmp == self.DANGER and self.last_status_change <= delta_limit_to_warning_status:
                 self.status = self.WARNING
-                updated_fields.extend(['status'])
+                update_fields.extend(['status'])
 
         # If the host still in the db, save it
         try:
             # Update only time and status fields
-            self.save(update_fields=updated_fields)
+            self.save(update_fields=update_fields)
         except DatabaseError as err:
             # TODO: Add logger to catch
             pass
