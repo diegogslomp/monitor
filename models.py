@@ -32,8 +32,6 @@ class Host(models.Model):
     )
     status = models.IntegerField(choices=STATUS_CHOICES, default=DEFAULT)
     logger = logging.getLogger(__name__)
-    tmp_status_info = ''
-    tmp_status = DEFAULT
     telnet_output = ''
 
     def __str__(self):
@@ -52,20 +50,21 @@ class Host(models.Model):
         '''Filter telnet output lines'''
         for line in self.telnet_output.lower().replace('\r', '').split('\n'):
             if re.search(r'[no ,in]valid', line):
-                self.tmp_status = self.DANGER
-                self.tmp_status_info = 'Invalid port registered or module is Down'
+                self.status = self.DANGER
+                self.status_info = 'Invalid port registered or module is Down'
                 continue
             for port in self.ports:
                 if re.search(r'{0}.*down'.format(port.number), line):
-                    self.tmp_status = self.DANGER
+                    self.status = self.DANGER
                     msg = 'Port {0} ({1}) is Down'.format(port.number, line.split()[1])
-                    if self.tmp_status_info == 'Connected':
-                        self.tmp_status_info = msg
+                    if self.status_info == 'Connected':
+                        self.status_info = msg
                     else:
-                        self.tmp_status_info += ', {0}'.format(msg)
+                        self.status_info += ', {0}'.format(msg)
 
     def telnet(self):
         '''Telnet connection and get registered ports status'''
+        self.logger.info('{0} telnet started'.format(self.ipv4))
         try:
             tn = telnetlib.Telnet(self.ipv4, timeout=TELNET_TIMEOUT)
             tn.read_until(b"Username:")
@@ -75,8 +74,8 @@ class Host(models.Model):
             # Wait prompt '->' for successful login or 'Username' for wrong credentials
             match_object = tn.expect([b"->", b"Username:"])[1]
             if match_object.group(0) == b"Username:":
-                self.tmp_status = Host.DANGER
-                self.tmp_status_info = 'Invalid telnet user or password'
+                self.status = Host.DANGER
+                self.status_info = 'Invalid telnet user or password'
             else:
                 for port in self.ports:
                     tn_command = 'show port status {0}'.format(port.number)
@@ -85,22 +84,23 @@ class Host(models.Model):
                 self.telnet_output = tn.read_all().decode('ascii')
                 self.filter_telnet_output()
         except socket.timeout:
-            self.tmp_status = Host.DANGER
-            self.tmp_status_info = 'Telnet timed out error'
+            self.status = Host.DANGER
+            self.status_info = 'Telnet timed out error'
+        self.logger.info('{0} telnet finished'.format(self.ipv4))
 
     def check_connection(self):
         '''Ping host, then telnet if there are registered ports'''
         if self.isalive:
             self.logger.info('{0} is up'.format(self.ipv4))
-            self.tmp_status = self.SUCCESS
-            self.tmp_status_info = 'Connected'
+            self.status = self.SUCCESS
+            self.status_info = 'Connected'
             if self.ports.count() > 0:
-                self.logger.info('{0} have registered ports, trying telnet connection'.format(self.ipv4))
+                self.logger.info('{0} have registered ports'.format(self.ipv4))
                 self.telnet()
         else:
             self.logger.info('{0} is down'.format(self.ipv4))
-            self.tmp_status = self.DANGER
-            self.tmp_status_info = 'Connection Lost'
+            self.status = self.DANGER
+            self.status_info = 'Connection Lost'
 
     def update_logs(self):
         '''Add new log and remove old logs based on MAX_LOG_LINES'''
@@ -115,24 +115,24 @@ class Host(models.Model):
         self.last_check = now
         # Only update changed fields in DB
         update_fields = ['last_check']
+        # Store old data before change it
+        old_status_info = self.status_info
+        old_status = self.status
         self.check_connection()
         #  if status info changed, update status and logs
-        if self.tmp_status_info != self.status_info:
-            self.logger.info('{0} status info changed from "{1}" to "{2}", updating logs'
-                              .format(self.ipv4, self.status_info, self.tmp_status_info))
-            self.status = self.tmp_status
-            self.status_info = self.tmp_status_info
+        if old_status_info != self.status_info:
+            self.logger.info('{0} status info changed from "{1}" to "{2}"'
+                              .format(self.ipv4, self.status_info, old_status_info))
             self.last_status_change = now
             update_fields.extend(['last_status_change', 'status', 'status_info'])
             self.update_logs()
-        # if only status changed, check if change to danger to warning
-        elif self.tmp_status == Host.DANGER:
+        # check if change danger status danger to warning
+        elif self.status == self.DANGER:
             delta_limit_to_warning_status = now - datetime.timedelta(days=DAYS_FROM_DANGER_TO_WARNING)
-            # if already whithout connection in 5 (default) or more days, 'warning' status
-            if self.tmp_status == self.DANGER and self.last_status_change <= delta_limit_to_warning_status:
+            if self.last_status_change <= delta_limit_to_warning_status:
                 self.status = self.WARNING
                 update_fields.extend(['status'])
-        # If the host still in the db, save it
+        # Save only if the host still in db
         try:
             self.save(update_fields=update_fields)
         except DatabaseError as err:
