@@ -11,7 +11,7 @@ import re
 
 class Host(models.Model):
     name = models.CharField(max_length=200)
-    description = models.CharField(max_length=200)
+    description = models.CharField(max_length=200, blank=True)
     ipv4 = models.GenericIPAddressField(protocol='IPv4')
     last_check = models.DateTimeField('last check', default=timezone.now)
     last_status_change = models.DateTimeField('last status change', default=timezone.now)
