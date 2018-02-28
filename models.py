@@ -1,12 +1,10 @@
 from django.db import models
-from django.db.utils import DatabaseError
 from django.utils import timezone
 from .config.base import USER, PASSWORD, TELNET_TIMEOUT
 from .config.base import DAYS_FROM_DANGER_TO_WARNING, MAX_LOG_LINES
 import datetime
 import logging
 import re
-import socket
 import subprocess
 import telnetlib
 
@@ -52,6 +50,7 @@ class Host(models.Model):
             if re.search(r'[no ,in]valid', line):
                 self.status = self.DANGER
                 self.status_info = 'Invalid port registered or module is Down'
+                self.logger.warning('{0}'.format(self.status_info))
                 continue
             for port in self.ports:
                 if re.search(r'{0}.*down'.format(port.number), line):
@@ -61,32 +60,36 @@ class Host(models.Model):
                         self.status_info = msg
                     else:
                         self.status_info += ', {0}'.format(msg)
+                    self.logger.warning('{0}'.format(self.status_info))
 
     def telnet(self):
         '''Telnet connection and get registered ports status'''
         self.logger.info('{0} telnet started'.format(self.ipv4))
         try:
             tn = telnetlib.Telnet(self.ipv4, timeout=TELNET_TIMEOUT)
-            tn.read_until(b"Username:")
+            tn.read_until(b"Username:", timeout=TELNET_TIMEOUT)
             tn.write(USER.encode('ascii') + b"\n")
-            tn.read_until(b"Password:")
+            tn.read_until(b"Password:", timeout=TELNET_TIMEOUT)
             tn.write(PASSWORD.encode('ascii') + b"\n")
-            # Wait prompt '->' for successful login or 'Username' for wrong credentials
-            match_object = tn.expect([b"->", b"Username:"])[1]
+            # '->' for successful login or 'Username' for wrong credentials
+            match_object = tn.expect([b"->", b"Username:"], timeout=TELNET_TIMEOUT)[1]
             if match_object.group(0) == b"Username:":
-                self.status = Host.DANGER
+                self.status = self.DANGER
                 self.status_info = 'Invalid telnet user or password'
+                self.logger.warning('{0}'.format(self.status_info))
             else:
                 for port in self.ports:
                     tn_command = 'show port status {0}'.format(port.number)
+                    self.logger.info('{0}'.format(tn_command))
                     tn.write(tn_command.encode('ascii') + b"\n")
                 tn.write(b"exit\n")
+                self.logger.info('{0} telnet finished'.format(self.ipv4))
                 self.telnet_output = tn.read_all().decode('ascii')
                 self.filter_telnet_output()
-        except socket.timeout:
-            self.status = Host.DANGER
-            self.status_info = 'Telnet timed out error'
-        self.logger.info('{0} telnet finished'.format(self.ipv4))
+        except Exception as ex:
+            self.status = self.DANGER
+            self.status_info = 'Telnet error: {0}'.format(ex)
+            self.logger.warning('{0}'.format(self.status_info))
 
     def check_connection(self):
         '''Ping host, then telnet if there are registered ports'''
@@ -126,17 +129,17 @@ class Host(models.Model):
             self.last_status_change = now
             update_fields.extend(['last_status_change', 'status', 'status_info'])
             self.update_logs()
-        # check if change danger status danger to warning
+        # check if change the status from danger to warning status
         elif self.status == self.DANGER:
             delta_limit_to_warning_status = now - datetime.timedelta(days=DAYS_FROM_DANGER_TO_WARNING)
             if self.last_status_change <= delta_limit_to_warning_status:
                 self.status = self.WARNING
                 update_fields.extend(['status'])
-        # Save only if the host still in db
+        # Save only if the host was not deleted while in buffer
         try:
             self.save(update_fields=update_fields)
-        except DatabaseError as err:
-            self.logger.warning('{0} db saving error, deleted from database?'.format(self.ipv4))
+        except Exception as ex:
+            self.logger.warning('{0} db saving error: {1}, perhaps was deleted from database'.format(self.ipv4, ex))
 
 
 class Log(models.Model):
