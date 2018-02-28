@@ -41,7 +41,7 @@ class Host(models.Model):
 
     @property
     def isalive(self):
-        return not subprocess.call('ping {0} -c 1 -W 2 -q > /dev/null 2>&1'\
+        return not subprocess.call('ping {} -c 1 -W 2 -q > /dev/null 2>&1'\
                                     .format(self.ipv4), shell=True)
 
     def filter_telnet_output(self):
@@ -50,21 +50,21 @@ class Host(models.Model):
             if re.search(r'[no ,in]valid', line):
                 self.status = self.DANGER
                 self.status_info = 'Invalid port registered or module is Down'
-                self.logger.warning('{0}: {1}'.format(self.ipv4, self.status_info.lower()))
+                self.logger.warning('{:14} {}'.format(self.ipv4, self.status_info.lower()))
                 continue
             for port in self.ports:
-                if re.search(r'{0}.*down'.format(port.number), line):
+                if re.search(r'{}.*down'.format(port.number), line):
                     self.status = self.DANGER
-                    msg = 'Port {0} ({1}) is Down'.format(port.number, line.split()[1])
+                    msg = 'Port {} ({}) is Down'.format(port.number, line.split()[1])
                     if self.status_info == 'Connected':
                         self.status_info = msg
                     else:
-                        self.status_info += ', {0}'.format(msg)
-                    self.logger.warning('{0}: {1}'.format(self.ipv4, self.status_info.lower()))
+                        self.status_info += ', {}'.format(msg)
+                    self.logger.warning('{:14} {}'.format(self.ipv4, self.status_info.lower()))
 
     def telnet(self):
         '''Telnet connection and get registered ports status'''
-        self.logger.info('{0}: telnet started'.format(self.ipv4))
+        self.logger.info('{:14} telnet started'.format(self.ipv4))
         try:
             tn = telnetlib.Telnet(self.ipv4, timeout=TELNET_TIMEOUT)
             tn.read_until(b"Username:", timeout=TELNET_TIMEOUT)
@@ -76,34 +76,34 @@ class Host(models.Model):
             if match_object.group(0) == b"Username:":
                 self.status = self.DANGER
                 self.status_info = 'Invalid telnet user or password'
-                self.logger.warning('{0}: {1}'.format(self.ipv4, self.status_info.lower()))
+                self.logger.warning('{:14} {}'.format(self.ipv4, self.status_info.lower()))
             else:
                 for port in self.ports:
                     tn_command = 'show port status {0}'.format(port.number)
-                    self.logger.info('{0}: {1}'.format(self.ipv4, tn_command))
+                    self.logger.info('{:14} {}'.format(self.ipv4, tn_command))
                     tn.write(tn_command.encode('ascii') + b"\n")
                 tn.write(b"exit\n")
-                self.logger.info('{0}: telnet finished'.format(self.ipv4))
+                self.logger.info('{:14} telnet finished'.format(self.ipv4))
                 self.telnet_output = tn.read_all().decode('ascii')
                 self.filter_telnet_output()
         except Exception as ex:
             self.status = self.DANGER
             self.status_info = 'Telnet error: {0}'.format(ex)
-            self.logger.warning('{0}: {1}'.format(self.ipv4, self.status_info.lower()))
+            self.logger.warning('{:14} {}'.format(self.ipv4, self.status_info.lower()))
 
     def check_connection(self):
         '''Ping host, then telnet if there are registered ports'''
         if self.isalive:
             self.status = self.SUCCESS
             self.status_info = 'Connected'
-            self.logger.info('{0}: {1}'.format(self.ipv4, self.status_info.lower()))
+            self.logger.info('{:14} {}'.format(self.ipv4, self.status_info.lower()))
             if self.ports.count() > 0:
-                self.logger.info('{0}: telnet for registered ports'.format(self.ipv4))
+                self.logger.info('{:14} telnet for registered ports'.format(self.ipv4))
                 self.telnet()
         else:
             self.status = self.DANGER
             self.status_info = 'Connection Lost'
-            self.logger.info('{0}: {1}'.format(self.ipv4, self.status_info.lower()))
+            self.logger.info('{:14} {}'.format(self.ipv4, self.status_info.lower()))
 
     def update_logs(self):
         '''Add new log and remove old logs based on MAX_LOG_LINES'''
@@ -124,7 +124,7 @@ class Host(models.Model):
         self.check_connection()
         #  if status info changed, update status and logs
         if old_status_info != self.status_info:
-            self.logger.info('{0}: status info changed from "{1}" to "{2}"'
+            self.logger.info('{:14} status info changed from "{}" to "{}"'
                               .format(self.ipv4, self.status_info.lower(), old_status_info.lower()))
             self.last_status_change = now
             update_fields.extend(['last_status_change', 'status', 'status_info'])
@@ -139,7 +139,7 @@ class Host(models.Model):
         try:
             self.save(update_fields=update_fields)
         except Exception as ex:
-            self.logger.warning('{0}: db saving error: {1}, perhaps was deleted from database'.format(self.ipv4, ex))
+            self.logger.warning('{:14} db saving error: {}, perhaps was deleted from database'.format(self.ipv4, ex))
 
 
 class Log(models.Model):
