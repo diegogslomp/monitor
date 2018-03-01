@@ -60,7 +60,7 @@ class Host(models.Model):
                         self.status_info = msg
                     else:
                         self.status_info += ', {}'.format(msg)
-                    self.logger.warning('{:14} {}'.format(self.ipv4, self.status_info.lower()))
+                    self.logger.info('{:14} {}'.format(self.ipv4, self.status_info.lower()))
 
     def telnet(self):
         '''Telnet connection and get registered ports status'''
