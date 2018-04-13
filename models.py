@@ -107,10 +107,14 @@ class Host(models.Model):
 
     def update_logs(self):
         '''Add new log and remove old logs based on MAX_LOG_LINES'''
-        Log.objects.create(host=self, status=self.status,
-                           status_info=self.status_info, status_change=self.last_status_change)
-        Log.objects.filter(pk__in=Log.objects.filter(host=self).order_by('-status_change')
-                           .values_list('pk')[MAX_LOG_LINES:]).delete()
+        try:
+            Log.objects.create(host=self, status=self.status,
+                               status_info=self.status_info, status_change=self.last_status_change)
+            Log.objects.filter(pk__in=Log.objects.filter(host=self).order_by('-status_change')
+                               .values_list('pk')[MAX_LOG_LINES:]).delete()
+        except Exception as ex:
+            self.logger.warning('{:14} db saving error: {}, perhaps was deleted from database'.format(self.ipv4, ex))
+
 
     def update_status(self):
         '''The 'main' function of monitord, check/update host and logs'''
