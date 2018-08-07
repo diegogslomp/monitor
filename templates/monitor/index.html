@@ -7,14 +7,14 @@
 {% endblock %}
 
 {% block javascript %}
-    <script>
-        async function loadData() {
-            const url = "{% url 'monitor:host_list' %}"
-            const data = await fetch(url)
-            const html = await data.text()
-            document.querySelector('#host_list').innerHTML = html
-        }
-        loadData();
-        setInterval(loadData, 15000);
-    </script>
+<script>
+    async function loadData() {
+        const url = "{% url 'monitor:host_list' %}"
+        const data = await fetch(url)
+        const html = await data.text()
+        document.querySelector('#host_list').innerHTML = html
+    }
+    loadData();
+    setInterval(loadData, 15000);
+</script>
 {% endblock %}
