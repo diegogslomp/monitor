@@ -40,6 +40,10 @@ class Host(models.Model):
         return Port.objects.filter(host=self)
 
     @property
+    def monitored_ports(self):
+        return Port.objects.filter(host=self, is_monitored=True)
+
+    @property
     def isalive(self):
         return not subprocess.call('ping {} -c 1 -W 2 -q > /dev/null 2>&1'\
                                     .format(self.ipv4), shell=True)
@@ -52,7 +56,7 @@ class Host(models.Model):
                 self.status_info = 'Invalid port registered or module is Down'
                 self.logger.warning('{:14} {}'.format(self.ipv4, self.status_info.lower()))
                 continue
-            for port in self.ports:
+            for port in self.monitored_ports:
                 if re.search(r'{}.*down'.format(port.number), line):
                     self.status = self.DANGER
                     msg = 'Port {} ({}) is Down'.format(port.number, line.split()[1])
@@ -115,7 +119,6 @@ class Host(models.Model):
         except Exception as ex:
             self.logger.warning('{:14} db saving error: {}, perhaps was deleted from database'.format(self.ipv4, ex))
 
-
     def update_status(self):
         '''The 'main' function of monitord, check/update host and logs'''
         now = timezone.now()
@@ -161,6 +164,10 @@ class Port(models.Model):
     '''Ports used to check status using telnet'''
     host = models.ForeignKey(Host, on_delete=models.CASCADE)
     number = models.CharField(max_length=20)
+    is_monitored = models.BooleanField(default=False)
+    counter_status = models.IntegerField(choices=Host.STATUS_CHOICES, default=Host.DEFAULT)
+    counter_last_change = models.DateTimeField('last status change', default=timezone.now)
+    error_counter = models.IntegerField(default=0)
 
     def __str__(self):
         return self.number
