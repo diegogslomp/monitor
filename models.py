@@ -30,7 +30,6 @@ class Host(models.Model):
     )
     status = models.IntegerField(choices=STATUS_CHOICES, default=DEFAULT)
     logger = logging.getLogger(__name__)
-    telnet_output = ''
 
     def __str__(self):
         return self.name
@@ -48,10 +47,10 @@ class Host(models.Model):
         return not subprocess.call('ping {} -c 1 -W 2 -q > /dev/null 2>&1'\
                                     .format(self.ipv4), shell=True)
 
-    def filter_monitored_ports_status(self):
-        '''Filter telnet manually adde monitored ports'''
-        if self.telnet_output != '':
-            for line in self.telnet_output.lower().replace('\r', '').split('\n'):
+    def filter_monitored_ports_status(self, telnet_output):
+        '''Filter telnet manually added monitored ports'''
+        if telnet_output != '':
+            for line in telnet_output.lower().replace('\r', '').split('\n'):
                 if re.search(r'[no ,in]valid', line):
                     self.status = self.DANGER
                     self.status_info = 'Invalid port registered or module is Down'
@@ -67,19 +66,23 @@ class Host(models.Model):
                             else:
                                 self.status_info += ', {}'.format(msg)
                             self.logger.info('{:14} {}'.format(self.ipv4, self.status_info.lower()))
-        
+    
+    def filter_port_counters(self, telnet_output):
+        if telnet_output != '':
+            for line in telnet_output.lower().replace('\r', '').split('\n'):
+                if re.search(r'^port: ', line):
+                    self.logger.info('{:14} {}'.format(self.ipv4, line.split()[1]))
+
     def _telnet_commands_monitored_ports(self):
         commands = []
         for port in self.monitored_ports:
             commands.append('show port status {0}'.format(port.number))
         return commands
-
-    def _telnet_commands_port_counters(self):
-        return ['show port counters']
-        
+      
     def telnet(self, commands):
         '''Telnet connection and get registered ports status'''
         self.logger.info('{:14} telnet started'.format(self.ipv4))
+        telnet_output = ''
         try:
             tn = telnetlib.Telnet(self.ipv4, timeout=TELNET_TIMEOUT)
             tn.read_until(b"Username:", timeout=TELNET_TIMEOUT)
@@ -98,11 +101,18 @@ class Host(models.Model):
                     tn.write(tn_command.encode('ascii') + b"\n")
                 tn.write(b"exit\n")
                 self.logger.info('{:14} telnet finished'.format(self.ipv4))
-                self.telnet_output = tn.read_all().decode('ascii')
+                telnet_output = tn.read_all().decode('ascii')
         except Exception as ex:
             self.status = self.DANGER
             self.status_info = 'Telnet error: {0}'.format(ex)
             self.logger.warning('{:14} {}'.format(self.ipv4, self.status_info.lower()))
+        finally:
+            return telnet_output
+
+    def check_port_counters(self):
+        if self.isalive:
+            telnet_output = self.telnet(['show port counters'])
+            self.filter_port_counters(telnet_output)
 
     def check_connection(self):
         '''Ping host, then telnet if there are registered ports'''
@@ -112,8 +122,8 @@ class Host(models.Model):
             self.logger.info('{:14} {}'.format(self.ipv4, self.status_info.lower()))
             if self.monitored_ports.count() > 0:
                 self.logger.info('{:14} telnet to check monitored ports'.format(self.ipv4))
-                self.telnet(self._telnet_commands_monitored_ports())
-                self.filter_monitored_ports_status()
+                telnet_output = self.telnet(self._telnet_commands_monitored_ports())
+                self.filter_monitored_ports_status(telnet_output)
         else:
             self.status = self.DANGER
             self.status_info = 'Connection Lost'
