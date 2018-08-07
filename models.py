@@ -48,25 +48,36 @@ class Host(models.Model):
         return not subprocess.call('ping {} -c 1 -W 2 -q > /dev/null 2>&1'\
                                     .format(self.ipv4), shell=True)
 
-    def filter_telnet_output(self):
-        '''Filter telnet output lines'''
-        for line in self.telnet_output.lower().replace('\r', '').split('\n'):
-            if re.search(r'[no ,in]valid', line):
-                self.status = self.DANGER
-                self.status_info = 'Invalid port registered or module is Down'
-                self.logger.warning('{:14} {}'.format(self.ipv4, self.status_info.lower()))
-                continue
-            for port in self.monitored_ports:
-                if re.search(r'{}.*down'.format(port.number), line):
+    def filter_monitored_ports_status(self):
+        '''Filter telnet manually adde monitored ports'''
+        if self.telnet_output != '':
+            for line in self.telnet_output.lower().replace('\r', '').split('\n'):
+                if re.search(r'[no ,in]valid', line):
                     self.status = self.DANGER
-                    msg = 'Port {} ({}) is Down'.format(port.number, line.split()[1])
-                    if self.status_info == 'Connected':
-                        self.status_info = msg
-                    else:
-                        self.status_info += ', {}'.format(msg)
-                    self.logger.info('{:14} {}'.format(self.ipv4, self.status_info.lower()))
+                    self.status_info = 'Invalid port registered or module is Down'
+                    self.logger.warning('{:14} {}'.format(self.ipv4, self.status_info.lower()))
+                    continue
+                if self.monitored_ports.count() > 0:
+                    for port in self.monitored_ports:
+                        if re.search(r'{}.*down'.format(port.number), line):
+                            self.status = self.DANGER
+                            msg = 'Port {} ({}) is Down'.format(port.number, line.split()[1])
+                            if self.status_info == 'Connected':
+                                self.status_info = msg
+                            else:
+                                self.status_info += ', {}'.format(msg)
+                            self.logger.info('{:14} {}'.format(self.ipv4, self.status_info.lower()))
+        
+    def _telnet_commands_monitored_ports(self):
+        commands = []
+        for port in self.monitored_ports:
+            commands.append('show port status {0}'.format(port.number))
+        return commands
 
-    def telnet(self):
+    def _telnet_commands_port_counters(self):
+        return ['show port counters']
+        
+    def telnet(self, commands):
         '''Telnet connection and get registered ports status'''
         self.logger.info('{:14} telnet started'.format(self.ipv4))
         try:
@@ -82,14 +93,12 @@ class Host(models.Model):
                 self.status_info = 'Invalid telnet user or password'
                 self.logger.warning('{:14} {}'.format(self.ipv4, self.status_info.lower()))
             else:
-                for port in self.ports:
-                    tn_command = 'show port status {0}'.format(port.number)
+                for tn_command in commands:
                     self.logger.info('{:14} {}'.format(self.ipv4, tn_command))
                     tn.write(tn_command.encode('ascii') + b"\n")
                 tn.write(b"exit\n")
                 self.logger.info('{:14} telnet finished'.format(self.ipv4))
                 self.telnet_output = tn.read_all().decode('ascii')
-                self.filter_telnet_output()
         except Exception as ex:
             self.status = self.DANGER
             self.status_info = 'Telnet error: {0}'.format(ex)
@@ -101,9 +110,10 @@ class Host(models.Model):
             self.status = self.SUCCESS
             self.status_info = 'Connected'
             self.logger.info('{:14} {}'.format(self.ipv4, self.status_info.lower()))
-            if self.ports.count() > 0:
-                self.logger.info('{:14} telnet for registered ports'.format(self.ipv4))
-                self.telnet()
+            if self.monitored_ports.count() > 0:
+                self.logger.info('{:14} telnet to check monitored ports'.format(self.ipv4))
+                self.telnet(self._telnet_commands_monitored_ports())
+                self.filter_monitored_ports_status()
         else:
             self.status = self.DANGER
             self.status_info = 'Connection Lost'
