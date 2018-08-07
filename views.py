@@ -9,6 +9,14 @@ class IndexView(generic.ListView):
     def get_queryset(self):
         return Host.objects.all().order_by('-status', '-last_status_change')
 
+class HostListView(generic.ListView):
+
+    template_name = 'monitor/host_list.html'
+    context_object_name = 'host_list'
+
+    def get_queryset(self):
+        return Host.objects.all().order_by('-status', '-last_status_change')
+
 
 class DetailView(generic.DetailView):
 
