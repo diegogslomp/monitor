@@ -13,6 +13,17 @@ class HostListView(ListView):
     def get_queryset(self):
         return Host.objects.all().order_by('-status', '-last_status_change')
 
+class PortView(TemplateView):
+
+    template_name = 'monitor/ports.html'
+
+class PortListView(ListView):
+
+    template_name = 'monitor/port_list.html'
+    context_object_name = 'port_list'
+
+    def get_queryset(self):
+        return Port.objects.filter(counter_status__gt=2).order_by('-counter_status', '-counter_last_change', 'error_counter')
 
 class DetailView(DetailView):
 

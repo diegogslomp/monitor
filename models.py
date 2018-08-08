@@ -66,13 +66,50 @@ class Host(models.Model):
                             else:
                                 self.status_info += ', {}'.format(msg)
                             self.logger.info('{:14} {}'.format(self.ipv4, self.status_info.lower()))
-    
-    def filter_port_counters(self, telnet_output):
-        if telnet_output != '':
-            for line in telnet_output.lower().replace('\r', '').split('\n'):
-                if re.search(r'^port: ', line):
-                    self.logger.info('{:14} {}'.format(self.ipv4, line.split()[1]))
 
+    def check_port_counters(self):
+        '''Filter telnet port counters, create ports and change status'''
+        if self.isalive and not re.search(r'^RADIO', self.name):
+            now = timezone.now()
+            telnet_output = self.telnet(['show port counters'])
+            if telnet_output != '':
+                port_object = None
+                for line in telnet_output.lower().replace('\r', '').split('\n'):
+                    # Create port if not exists
+                    if re.search(r'^port:', line):
+                        port_number = line.split()[1]
+                        self.logger.info('{:14} Filtered Port: {}'.format(self.ipv4, port_number))
+                        port_object = Port.objects.get_or_create(host=self, number=port_number)[0]
+                    elif re.search(r'^port :', line):
+                        port_number = line.split()[2]
+                        self.logger.info('{:14} Filtered Port: {}'.format(self.ipv4, port_number))
+                        port_object = Port.objects.get_or_create(host=self, number=port_number)[0]
+                    # Update counter and status
+                    elif re.search(r'^in errors', line):
+                        error_counter = int(line.split()[2])
+                        self.logger.info('{:14} Filtered Counter: {}'.format(self.ipv4, error_counter))
+                        self.logger.info('{:14} Old Counter: {}'.format(self.ipv4, port_object.error_counter))
+                        # If conter updated, change var and status
+                        if error_counter != port_object.error_counter:
+                            port_object.error_counter = error_counter
+                            port_object.counter_last_change = now
+                            port_object.counter_status = Host.DANGER    
+                            self.logger.info('{:14} counter updated to: {}'.format(self.ipv4, error_counter))
+                        else:
+                            # TODO: Add update status logic
+                            delta_1_day = now - datetime.timedelta(days=1)
+                            if port_object.counter_last_change <= delta_1_day:
+                                port_object.counter_status = self.WARNING
+                            delta_5_days = now - datetime.timedelta(days=5)
+                            if port_object.counter_last_change <= delta_5_days:
+                                port_object.counter_status = self.SUCCESS
+                            pass
+                        try:
+                            port_object.save()
+                        except Exception as ex:
+                            self.logger.warning('{:14} db saving error: {}, perhaps was deleted from database'.format(self.ipv4, ex))
+                        port_object = None
+                
     def _telnet_commands_monitored_ports(self):
         commands = []
         for port in self.monitored_ports:
@@ -108,11 +145,6 @@ class Host(models.Model):
             self.logger.warning('{:14} {}'.format(self.ipv4, self.status_info.lower()))
         finally:
             return telnet_output
-
-    def check_port_counters(self):
-        if self.isalive:
-            telnet_output = self.telnet(['show port counters'])
-            self.filter_port_counters(telnet_output)
 
     def check_connection(self):
         '''Ping host, then telnet if there are registered ports'''
