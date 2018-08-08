@@ -5,7 +5,8 @@
 {% block content %}
 <div class="ui {{ host.get_status_display }} message">
     <div class="ui segment">
-        <a class="ui {{ host.get_status_display }} basic button" href="{% url 'monitor:index' %}">Return</a>
+        <a class="ui {{ host.get_status_display }} basic button" href="{% url 'monitor:index' %}">Hosts</a>
+        <a class="ui {{ host.get_status_display }} basic button" href="{% url 'monitor:ports' %}">Ports</a>
     </div>
     <div class="ui segment">
         <h4 class="ui header">

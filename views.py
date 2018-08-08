@@ -23,7 +23,7 @@ class PortListView(ListView):
     context_object_name = 'port_list'
 
     def get_queryset(self):
-        return Port.objects.filter(counter_status__gt=2).order_by('-counter_status', '-counter_last_change', 'error_counter')
+        return Port.objects.filter(counter_status__gt=2).order_by('-counter_last_change', '-counter_status', 'error_counter')
 
 class DetailView(DetailView):
 
