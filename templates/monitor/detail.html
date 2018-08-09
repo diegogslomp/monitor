@@ -49,8 +49,8 @@
         </h4>
         <table class="ui very compact single line table">
         <tbody>
-            {% if host.log_set.count > 0 %}
-                {% for log in host.log_set.all|dictsortreversed:"status_change" %}
+            {% if host.hostlog_set.count > 0 %}
+                {% for log in host.hostlog_set.all|dictsortreversed:"status_change" %}
                     <tr class="{{ log.get_status_display }}">
                         <td>{{ log.status_info }}</td>
                         <td>{{ log.status_change }}</td>
