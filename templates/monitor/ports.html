@@ -2,17 +2,13 @@
 
 {% block title %} Port Counter List {% endblock %}
 
-{% block content %}
-<div id="port_list"></div>
-{% endblock %}
-
 {% block javascript %}
 <script>
     async function loadData() {
         const url = "{% url 'monitor:port_list' %}"
         const data = await fetch(url)
         const html = await data.text()
-        document.querySelector('#port_list').innerHTML = html
+        document.querySelector('#content').innerHTML = html
     }
     loadData();
 //    setInterval(loadData, 15000);

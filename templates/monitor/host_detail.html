@@ -1,8 +1,3 @@
-{% extends "monitor/base.html" %}
-
-{% block title %} Detailed Host {% endblock %}
-
-{% block content %}
 <div class="ui {{ host.get_status_display }} message">
     <div class="ui segment">
         <a class="ui {{ host.get_status_display }} basic button" href="{% url 'monitor:index' %}">All Hosts</a>
@@ -93,4 +88,3 @@
         </table>
     </div>
 </div>
- {% endblock %}
