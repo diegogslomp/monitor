@@ -1,5 +1,5 @@
 from django.views.generic import DetailView, ListView, TemplateView
-from monitor.models import Host, Log, Port
+from monitor.models import Host, Port
 
 class IndexView(TemplateView):
 
