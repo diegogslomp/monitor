@@ -122,6 +122,7 @@ class Host(models.Model):
                         if len(update_fields) > 0:
                             try:
                                 port_object.save(update_fields=update_fields)
+                                self.logger.info('{:14} save port log to db'.format(self.ipv4))
                             except Exception as ex:
                                 self.logger.warning('{:14} db saving port error: {}, perhaps was deleted from database'.format(self.ipv4, ex))
                         port_object = None
