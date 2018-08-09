@@ -98,27 +98,32 @@ class Host(models.Model):
                         error_counter = int(line.split()[2])
                         self.logger.info('{:14} Filtered Counter: {}'.format(self.ipv4, error_counter))
                         self.logger.info('{:14} Old Counter: {}'.format(self.ipv4, port_object.error_counter))
+                        # Only save updated fields
+                        update_fields=[]
                         # If conter updated, change var and status
                         if error_counter != port_object.error_counter:
                             port_object.error_counter = error_counter
                             port_object.counter_last_change = now
-                            port_object.counter_status = Host.DANGER  
+                            port_object.counter_status = Host.DANGER
+                            update_fields.extend(['error_counter', 'counter_last_change', 'counter_status']) 
                             # Add port log if counter changed
                             port_object.update_log()
                             self.logger.info('{:14} counter updated to: {}'.format(self.ipv4, error_counter))
                         else:
-                            # TODO: Add update status logic
+                            old_counter_status = port_object.counter_status
                             delta_1_day = now - datetime.timedelta(days=1)
                             if port_object.counter_last_change <= delta_1_day:
                                 port_object.counter_status = self.WARNING
                             delta_5_days = now - datetime.timedelta(days=5)
                             if port_object.counter_last_change <= delta_5_days:
                                 port_object.counter_status = self.SUCCESS
-                            pass
-                        try:
-                            port_object.save()
-                        except Exception as ex:
-                            self.logger.warning('{:14} db saving error: {}, perhaps was deleted from database'.format(self.ipv4, ex))
+                            if old_counter_status != port_object.counter_status:
+                                update_fields.extend(['counter_status'])
+                        if len(update_fields) > 0:
+                            try:
+                                port_object.save(update_fields=update_fields)
+                            except Exception as ex:
+                                self.logger.warning('{:14} db saving port error: {}, perhaps was deleted from database'.format(self.ipv4, ex))
                         port_object = None
                       
     def telnet(self, commands):
@@ -199,7 +204,7 @@ class Host(models.Model):
         try:
             self.save(update_fields=update_fields)
         except Exception as ex:
-            self.logger.warning('{:14} db saving error: {}, perhaps was deleted from database'.format(self.ipv4, ex))
+            self.logger.warning('{:14} db saving host error: {}, perhaps was deleted from database'.format(self.ipv4, ex))
 
 
 class HostLog(models.Model):
@@ -225,13 +230,13 @@ class Port(models.Model):
     def update_log(self):
         '''Add new port log and remove old logs based on MAX_LOG_LINES'''
         try:
-            PortLog.objects.create(port=self, counter_status=self.counter_status, 
+            PortLog.objects.create(port=self, host=self.host, counter_status=self.counter_status, 
                                    counter_last_change=self.counter_last_change,
                                    error_counter=self.error_counter)
-            PortLog.objects.filter(pk__in=PortLog.objects.filter(host=self.host).order_by('-counter_last_change')
+            PortLog.objects.filter(pk__in=PortLog.objects.filter(port=self).order_by('-counter_last_change')
                                 .values_list('pk')[MAX_LOG_LINES:]).delete()
         except Exception as ex:
-            self.logger.warning('{:14} db saving error: {}, perhaps was deleted from database'.format(self.ipv4, ex))
+            Host.logger.warning('{:14} db saving port error: {}, perhaps was deleted from database'.format(self.host.ipv4, ex))
 
     def __str__(self):
         return self.number
@@ -240,6 +245,7 @@ class Port(models.Model):
 class PortLog(models.Model):
     '''Port Logs showed in host detail view'''
     port = models.ForeignKey(Port, on_delete=models.CASCADE, null=True)
+    host = models.ForeignKey(Host, on_delete=models.CASCADE, null=True)
     counter_status = models.IntegerField(choices=Host.STATUS_CHOICES, default=Host.DEFAULT)
     counter_last_change = models.DateTimeField('last status change', default=timezone.now)
     error_counter = models.IntegerField(default=0)

@@ -36,7 +36,7 @@ class DetailView(TemplateView):
 
     def get_context_data(self, **kwargs):
         host = Host.objects.get(id=self.kwargs['pk'])
-        portlog = PortLog.objects.filter(port__in=Port.objects.filter(host=host))
+        portlog = PortLog.objects.filter(host=host)
         context = super(DetailView, self).get_context_data(**kwargs)
         context['host'] = host
         context['portlog'] = portlog
