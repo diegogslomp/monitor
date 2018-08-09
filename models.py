@@ -102,7 +102,9 @@ class Host(models.Model):
                         if error_counter != port_object.error_counter:
                             port_object.error_counter = error_counter
                             port_object.counter_last_change = now
-                            port_object.counter_status = Host.DANGER    
+                            port_object.counter_status = Host.DANGER  
+                            # Add port log if counter changed
+                            port_object.update_log()  
                             self.logger.info('{:14} counter updated to: {}'.format(self.ipv4, error_counter))
                         else:
                             # TODO: Add update status logic
@@ -160,7 +162,7 @@ class Host(models.Model):
             self.status_info = 'Connection Lost'
             self.logger.info('{:14} {}'.format(self.ipv4, self.status_info.lower()))
 
-    def update_host_log(self):
+    def update_log(self):
         '''Add new host log and remove old logs based on MAX_LOG_LINES'''
         try:
             HostLog.objects.create(host=self, status=self.status,
@@ -169,10 +171,6 @@ class Host(models.Model):
                                .values_list('pk')[MAX_LOG_LINES:]).delete()
         except Exception as ex:
             self.logger.warning('{:14} db saving error: {}, perhaps was deleted from database'.format(self.ipv4, ex))
-
-    def update_port_log(self):
-        '''Add new port log and remove old logs based on MAX_LOG_LINES'''
-        pass
 
     def check_and_update_host(self):
         '''The 'main' function of monitord, check/update host and logs'''
@@ -190,7 +188,7 @@ class Host(models.Model):
                               .format(self.ipv4, self.status_info.lower(), old_status_info.lower()))
             self.last_status_change = now
             update_fields.extend(['last_status_change', 'status', 'status_info'])
-            self.update_host_log()
+            self.update_log()
         # check if change the status from danger to warning status
         elif self.status == self.DANGER:
             delta_limit_to_warning_status = now - datetime.timedelta(days=DAYS_FROM_DANGER_TO_WARNING)
@@ -206,8 +204,9 @@ class Host(models.Model):
     def check_and_update_ports(self):
         pass
 
+
 class HostLog(models.Model):
-    '''Logs showed in host detail view'''
+    '''Host Logs showed in host detail view'''
     host = models.ForeignKey(Host, on_delete=models.CASCADE)
     status = models.IntegerField(choices=Host.STATUS_CHOICES, default=Host.DEFAULT)
     status_change = models.DateTimeField()
@@ -215,10 +214,6 @@ class HostLog(models.Model):
 
     def __str__(self):
         return self.host.name
-
-
-class PortLog(models.Model):
-    pass
 
 
 class Port(models.Model):
@@ -230,5 +225,27 @@ class Port(models.Model):
     counter_last_change = models.DateTimeField('last status change', default=timezone.now)
     error_counter = models.IntegerField(default=0)
 
+    def update_log(self):
+        '''Add new port log and remove old logs based on MAX_LOG_LINES'''
+        try:
+            PortLog.objects.create(port=self, counter_status=self.counter_status, 
+                                   counter_last_change=self.counter_last_change,
+                                   error_counter=self.error_counter)
+            PortLog.objects.filter(pk__in=PortLog.objects.filter(port=self).order_by('-counter_last_change')
+                                   .values_list('pk')[MAX_LOG_LINES:]).delete()
+        except Exception as ex:
+            self.logger.warning('{:14} db saving error: {}, perhaps was deleted from database'.format(self.ipv4, ex))
+
     def __str__(self):
         return self.number
+
+
+class PortLog(models.Model):
+    '''Port Logs showed in host detail view'''
+    port = models.ForeignKey(Port, on_delete=models.CASCADE, null=True)
+    counter_status = models.IntegerField(choices=Host.STATUS_CHOICES, default=Host.DEFAULT)
+    counter_last_change = models.DateTimeField('last status change', default=timezone.now)
+    error_counter = models.IntegerField(default=0)
+
+    def __str__(self):
+        return self.port.number

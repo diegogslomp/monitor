@@ -1,5 +1,5 @@
 from django.views.generic import DetailView, ListView, TemplateView
-from monitor.models import Host, Port
+from monitor.models import Host, Port, PortLog
 
 class IndexView(TemplateView):
 
@@ -25,7 +25,20 @@ class PortListView(ListView):
     def get_queryset(self):
         return Port.objects.filter(counter_status__gt=2, error_counter__gt=50).order_by('-counter_last_change', '-counter_status', 'error_counter')
 
-class DetailView(DetailView):
+""" class DetailView(DetailView):
 
     template_name = 'monitor/detail.html'
     model = Host
+
+ """
+class DetailView(TemplateView):
+
+    template_name = 'monitor/detail.html'
+
+    def get_context_data(self, **kwargs):
+        host = Host.objects.get(id=self.kwargs['pk'])
+        portlog = PortLog.objects.filter(port__in=Port.objects.filter(host=host))
+        context = super(DetailView, self).get_context_data(**kwargs)
+        context['host'] = host
+        context['portlog'] = portlog
+        return context
