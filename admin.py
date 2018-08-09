@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Host, Port, HostLog
+from .models import Host, Port
 
 
 class PortInLines (admin.TabularInline):
