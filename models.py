@@ -50,8 +50,15 @@ class Host(models.Model):
     def check_monitored_ports_status(self):
         '''Filter telnet manually added monitored ports'''
         if self.monitored_ports.count() > 0:
+
+            def telnet_commands_monitored_ports():
+                commands = []
+                for port in self.monitored_ports:
+                    commands.append('show port status {0}'.format(port.number))
+                return commands
+
             self.logger.info('{:14} telnet to check monitored ports'.format(self.ipv4))
-            telnet_output = self.telnet(self._telnet_commands_monitored_ports())    
+            telnet_output = self.telnet(telnet_commands_monitored_ports())    
             if telnet_output != '':
                 for line in telnet_output.lower().replace('\r', '').split('\n'):
                     if re.search(r'[no ,in]valid', line):
@@ -59,16 +66,15 @@ class Host(models.Model):
                         self.status_info = 'Invalid port registered or module is Down'
                         self.logger.warning('{:14} {}'.format(self.ipv4, self.status_info.lower()))
                         continue
-                    if self.monitored_ports.count() > 0:
-                        for port in self.monitored_ports:
-                            if re.search(r'{}.*down'.format(port.number), line):
-                                self.status = self.DANGER
-                                msg = 'Port {} ({}) is Down'.format(port.number, line.split()[1])
-                                if self.status_info == 'Connected':
-                                    self.status_info = msg
-                                else:
-                                    self.status_info += ', {}'.format(msg)
-                                self.logger.info('{:14} {}'.format(self.ipv4, self.status_info.lower()))
+                    for port in self.monitored_ports:
+                        if re.search(r'{}.*down'.format(port.number), line):
+                            self.status = self.DANGER
+                            msg = 'Port {} ({}) is Down'.format(port.number, line.split()[1])
+                            if self.status_info == 'Connected':
+                                self.status_info = msg
+                            else:
+                                self.status_info += ', {}'.format(msg)
+                            self.logger.info('{:14} {}'.format(self.ipv4, self.status_info.lower()))
 
     def check_port_counters(self):
         '''Filter telnet port counters, create ports and change status'''
@@ -112,13 +118,7 @@ class Host(models.Model):
                         except Exception as ex:
                             self.logger.warning('{:14} db saving error: {}, perhaps was deleted from database'.format(self.ipv4, ex))
                         port_object = None
-                
-    def _telnet_commands_monitored_ports(self):
-        commands = []
-        for port in self.monitored_ports:
-            commands.append('show port status {0}'.format(port.number))
-        return commands
-      
+                      
     def telnet(self, commands):
         '''Telnet connection and get registered ports status'''
         self.logger.info('{:14} telnet started'.format(self.ipv4))
