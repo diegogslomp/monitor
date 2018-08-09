@@ -1,13 +1,13 @@
 {% if host_list %}
 <table class="ui single line very compact selectable table">
     <tbody>
-        <tr>
+        <thead>
             <td><strong>Address</strong></td>
             <td><strong>Hostname</strong></td>
             <td><strong>Status</strong></td>
             <td><strong>Last Status Change</strong></td>
             <td><strong>Last Check</strong></td>
-        </tr>
+        </thead>
         {% for host in host_list %}
             <tr class="{{ host.get_status_display }}">
                 <td class="selectable"><a href="{% url 'monitor:detail' host.id %}"><strong>{{ host.ipv4 }}</strong></a></td>
