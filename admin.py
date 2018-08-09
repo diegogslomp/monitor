@@ -1,13 +1,9 @@
 from django.contrib import admin
-from .models import Host, Port
+from .models import Host, Port, HostLog
 
 
 class PortInLines (admin.TabularInline):
     model = Port
-    extra = 1
-
-class LogInLines (admin.TabularInline):
-    model = Log
     extra = 1
 
 class HostAdmin(admin.ModelAdmin):
