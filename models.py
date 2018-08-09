@@ -104,7 +104,7 @@ class Host(models.Model):
                             port_object.counter_last_change = now
                             port_object.counter_status = Host.DANGER  
                             # Add port log if counter changed
-                            port_object.update_log()  
+                            port_object.update_log()
                             self.logger.info('{:14} counter updated to: {}'.format(self.ipv4, error_counter))
                         else:
                             # TODO: Add update status logic
@@ -168,7 +168,7 @@ class Host(models.Model):
             HostLog.objects.create(host=self, status=self.status,
                                status_info=self.status_info, status_change=self.last_status_change)
             HostLog.objects.filter(pk__in=HostLog.objects.filter(host=self).order_by('-status_change')
-                               .values_list('pk')[MAX_LOG_LINES:]).delete()
+                                .values_list('pk')[MAX_LOG_LINES:]).delete()
         except Exception as ex:
             self.logger.warning('{:14} db saving error: {}, perhaps was deleted from database'.format(self.ipv4, ex))
 
@@ -201,9 +201,6 @@ class Host(models.Model):
         except Exception as ex:
             self.logger.warning('{:14} db saving error: {}, perhaps was deleted from database'.format(self.ipv4, ex))
 
-    def check_and_update_ports(self):
-        pass
-
 
 class HostLog(models.Model):
     '''Host Logs showed in host detail view'''
@@ -231,8 +228,8 @@ class Port(models.Model):
             PortLog.objects.create(port=self, counter_status=self.counter_status, 
                                    counter_last_change=self.counter_last_change,
                                    error_counter=self.error_counter)
-            PortLog.objects.filter(pk__in=PortLog.objects.filter(port=self).order_by('-counter_last_change')
-                                   .values_list('pk')[MAX_LOG_LINES:]).delete()
+            PortLog.objects.filter(pk__in=PortLog.objects.filter(host=self.host).order_by('-counter_last_change')
+                                .values_list('pk')[MAX_LOG_LINES:]).delete()
         except Exception as ex:
             self.logger.warning('{:14} db saving error: {}, perhaps was deleted from database'.format(self.ipv4, ex))
 
