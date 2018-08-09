@@ -2,6 +2,10 @@
 
 {% block title %} Port Counter List {% endblock %}
 
+{% block content %}
+    <div id="content"></div>
+{% endblock %}
+
 {% block javascript %}
 <script>
     async function loadData() {
@@ -11,6 +15,5 @@
         document.querySelector('#content').innerHTML = html
     }
     loadData();
-//    setInterval(loadData, 15000);
 </script>
 {% endblock %}

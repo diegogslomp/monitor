@@ -8,8 +8,14 @@
     <link rel="stylesheet" type="text/css" href="{% static 'monitor/css/semantic.min.css' %}" />
     <link rel="shortcut icon" href="{% static 'monitor/favicon.ico' %}">
 <body>
-        {% block content %}{% endblock %}
-    <div id="content"></div>
+    
+    <div class="ui mini two item menu">
+        <a class="item" href="{% url 'monitor:index' %}">All Hosts</a>
+        <a class="item" href="{% url 'monitor:ports' %}">All Ports</a>
+    </div>
+    
+    {% block content %}{% endblock %}
+    
     {% block javascript %}{% endblock %}
 </body>
 </html>

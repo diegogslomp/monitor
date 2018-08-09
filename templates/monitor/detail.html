@@ -3,11 +3,7 @@
 {% block title %} Detailed Host {% endblock %}
 
 {% block content %}
-<div class="ui {{ host.get_status_display }} message">
-    <div class="ui segment">
-        <a class="ui {{ host.get_status_display }} basic button" href="{% url 'monitor:index' %}">All Hosts</a>
-        <a class="ui {{ host.get_status_display }} basic button" href="{% url 'monitor:ports' %}">All Ports</a>
-    </div>
+
     <div class="ui segment">
         <h4 class="ui header">
             <i class="bar chart icon"></i>
@@ -92,5 +88,5 @@
         </tbody>
         </table>
     </div>
-</div>
+
  {% endblock %}
