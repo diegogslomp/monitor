@@ -3,9 +3,10 @@
 {% block title %} Detailed Host {% endblock %}
 
 {% block content %}
+    <div class="ui message {{ host.get_status_display }}">
     <div class="ui segment">
-        <a href="{% url 'monitor:index' %}" class="ui basic button">Return</a>
-        <a href="{% url 'monitor:ports' %}" class="ui basic button">All Ports</a>
+        <a href="{% url 'monitor:index' %}" class="ui {{ host.get_status_display }} basic button">Return</a>
+        <a href="{% url 'monitor:ports' %}" class="ui {{ host.get_status_display }} basic button">All Ports</a>
     </div>
     <div class="ui segment">
         <h4 class="ui header">
@@ -90,6 +91,7 @@
             {% endif %}
         </tbody>
         </table>
+    </div>
     </div>
 
  {% endblock %}
