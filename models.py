@@ -16,6 +16,9 @@ class Host(models.Model):
     last_check = models.DateTimeField('last check', default=timezone.now)
     last_status_change = models.DateTimeField('last status change', default=timezone.now)
     status_info = models.CharField(max_length=200, blank=True, default='')
+    network = models.GenericIPAddressField(protocol='IPv4', null=True, blank=True)
+    circuit = models.IntegerField(null=True, blank=True)
+    secretary = models.CharField(max_length=200, null=True, blank=True)
     DEFAULT = 0
     SUCCESS = 1
     INFO = 2
