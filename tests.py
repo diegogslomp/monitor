@@ -11,7 +11,8 @@ class HostModelTest(TestCase):
         Test a "pingable" host
         """
         active_host = Host(name='local', ipv4='127.0.0.1')
-        active_host.check_and_update_host()
+        self.assertEqual(Host.DEFAULT, active_host.status)
+        active_host.check_ping()
         self.assertEqual(Host.SUCCESS, active_host.status)
 
 class HostListViewTests(TestCase):
