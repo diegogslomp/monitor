@@ -13,7 +13,7 @@ class Command(BaseCommand):
     def loop(self):
         while True:
             for host in Host.objects.all():
-                host.check_and_update_host()
+                host.check_and_update()
                 time.sleep(WAIT_FOR_NEXT)
 
     def handle(self, *args, **options):

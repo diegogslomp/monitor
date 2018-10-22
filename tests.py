@@ -3,20 +3,37 @@ from django.utils import timezone
 from django.urls import reverse
 from django.test import TestCase
 
+from .config.base import DAYS_FROM_DANGER_TO_WARNING
 from .models import Host
 
 class HostModelTest(TestCase):
-    def test_host_status(self):
+    def test_success_status(self):
         """
         Test a "pingable" host
         """
-        active_host = Host(name='local', ipv4='127.0.0.1')
-        self.assertEqual(Host.DEFAULT, active_host.status)
-        active_host.check_ping()
-        self.assertEqual(Host.SUCCESS, active_host.status)
+        online_host = Host(name='online', ipv4='127.0.0.1')
+        self.assertEqual(Host.DEFAULT, online_host.status)
+        online_host.check_ping()
+        self.assertEqual(Host.SUCCESS, online_host.status)
+
+    def test_danger_to_warning_status(self):
+        """
+        Change host status after DAYS_FROM_DANGER_TO_WARNING
+        """
+        now = timezone.now()
+        offline_host = Host(
+            name='offline', 
+            ipv4='7.7.7.7', 
+            status=Host.DANGER,
+            last_status_change = now - datetime.timedelta(days=DAYS_FROM_DANGER_TO_WARNING),
+            status_info = 'Connection Lost',
+            )
+        offline_host.check_and_update()
+        self.assertEqual(Host.WARNING, offline_host.status)
+        
 
 class HostListViewTests(TestCase):
-    def test_no_host_list(self):
+    def test_empty_list(self):
         """
         If no hosts exist, an appropriate message is displayed.
         """

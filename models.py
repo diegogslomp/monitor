@@ -178,7 +178,7 @@ class Host(models.Model):
         except Exception as ex:
             self.logger.warning('{:14} db saving error: {}, perhaps was deleted from database'.format(self.ipv4, ex))
 
-    def check_and_update_host(self):
+    def check_and_update(self):
         '''The 'main' function of monitord, check/update host and logs'''
         now = timezone.now()
         self.last_check = now
