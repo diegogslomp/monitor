@@ -124,7 +124,7 @@ class Host(models.Model):
                                 port_object.save(update_fields=update_fields)
                                 self.logger.info('{:14} save port log to db'.format(self.ipv4))
                             except Exception as ex:
-                                self.logger.warning('{:14} db saving port error: {}, perhaps was deleted from database'.format(self.ipv4, ex))
+                                self.logger.warning('{:14} db saving port error: {}'.format(self.ipv4, ex))
                         port_object = None
                       
     def telnet(self, commands):
@@ -133,12 +133,12 @@ class Host(models.Model):
         telnet_output = ''
         try:
             tn = telnetlib.Telnet(self.ipv4, timeout=TELNET_TIMEOUT)
-            tn.read_until(b"Username:", timeout=TELNET_TIMEOUT)
+            tn.read_until(b"Username:")
             tn.write(USER.encode('ascii') + b"\n")
-            tn.read_until(b"Password:", timeout=TELNET_TIMEOUT)
+            tn.read_until(b"Password:")
             tn.write(PASSWORD.encode('ascii') + b"\n")
             # '->' for successful login or 'Username' for wrong credentials
-            match_object = tn.expect([b"->", b"Username:"], timeout=TELNET_TIMEOUT)[1]
+            match_object = tn.expect([b"->", b"Username:"])[1]
             if match_object.group(0) == b"Username:":
                 self.status = self.DANGER
                 self.status_info = 'Invalid telnet user or password'
@@ -176,7 +176,7 @@ class Host(models.Model):
             HostLog.objects.filter(pk__in=HostLog.objects.filter(host=self).order_by('-status_change')
                                 .values_list('pk')[MAX_LOG_LINES:]).delete()
         except Exception as ex:
-            self.logger.warning('{:14} db saving error: {}, perhaps was deleted from database'.format(self.ipv4, ex))
+            self.logger.warning('{:14} db saving error: {}'.format(self.ipv4, ex))
 
     def check_and_update(self):
         '''The 'main' function of monitord, check/update host and logs'''
@@ -205,7 +205,7 @@ class Host(models.Model):
         try:
             self.save(update_fields=update_fields)
         except Exception as ex:
-            self.logger.warning('{:14} db saving host error: {}, perhaps was deleted from database'.format(self.ipv4, ex))
+            self.logger.warning('{:14} db saving host error: {}'.format(self.ipv4, ex))
 
 
 class HostLog(models.Model):
@@ -237,7 +237,7 @@ class Port(models.Model):
             PortLog.objects.filter(pk__in=PortLog.objects.filter(port=self).order_by('-counter_last_change')
                                 .values_list('pk')[MAX_LOG_LINES:]).delete()
         except Exception as ex:
-            Host.logger.warning('{:14} db saving port error: {}, perhaps was deleted from database'.format(self.host.ipv4, ex))
+            Host.logger.warning('{:14} db saving port error: {}'.format(self.host.ipv4, ex))
 
     def __str__(self):
         return self.number
