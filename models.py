@@ -191,7 +191,7 @@ class Host(models.Model):
         #  if status info changed, update status and logs
         if old_status_info != self.status_info:
             self.logger.info('{:14} status info changed from "{}" to "{}"'
-                              .format(self.ipv4, self.status_info.lower(), old_status_info.lower()))
+                              .format(self.ipv4, old_status_info.lower(), self.status_info.lower()))
             self.last_status_change = now
             update_fields.extend(['last_status_change', 'status', 'status_info'])
             self.update_log()
