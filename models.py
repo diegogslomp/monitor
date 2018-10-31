@@ -126,10 +126,27 @@ class Host(models.Model):
                             except Exception as ex:
                                 self.logger.warning('{:14} db saving port error: {}'.format(self.ipv4, ex))
                         port_object = None
-                      
+
+    def check_gateway(self):
+        '''Filter gateway from telnet output'''
+        if self.isalive and not re.search(r'^RADIO', self.name):
+            now = timezone.now()
+            telnet_output = self.telnet(['show ip route'])
+            if telnet_output != '':
+                for line in telnet_output.lower().replace('\r', '').split('\n'):
+                    if re.search(r'0.0.0.0', line):
+                        self.logger.debug('{:14} Gateway telnet line: {}'.format(self.ipv4, line))
+                        if re.search('^\s*s', line):
+                            self.logger.info('{:14} Gateway: {}'.format(self.ipv4, line.split()[4]))
+                            return line.split()[4]
+                        else:                            
+                            self.logger.info('{:14} Gateway: {}'.format(self.ipv4, line.split()[1]))
+                            return line.split()[1]
+
+
     def telnet(self, commands):
         '''Telnet connection and get registered ports status'''
-        self.logger.info('{:14} telnet started'.format(self.ipv4))
+        self.logger.debug('{:14} telnet started'.format(self.ipv4))
         telnet_output = ''
         try:
             tn = telnetlib.Telnet(self.ipv4, timeout=TELNET_TIMEOUT)
@@ -145,10 +162,10 @@ class Host(models.Model):
                 self.logger.warning('{:14} {}'.format(self.ipv4, self.status_info.lower()))
             else:
                 for tn_command in commands:
-                    self.logger.info('{:14} {}'.format(self.ipv4, tn_command))
+                    self.logger.debug('{:14} {}'.format(self.ipv4, tn_command))
                     tn.write(tn_command.encode('ascii') + b"\n")
                 tn.write(b"exit\n")
-                self.logger.info('{:14} telnet finished'.format(self.ipv4))
+                self.logger.debug('{:14} telnet finished'.format(self.ipv4))
                 telnet_output = tn.read_all().decode('ascii')
         except Exception as ex:
             self.status = self.DANGER
