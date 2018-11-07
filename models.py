@@ -82,7 +82,7 @@ class Host(models.Model):
                                 self.status_info = msg
                             else:
                                 self.status_info += ', {}'.format(msg)
-                            self.log(self.status_info, 'info')
+                            self.log(self.status_info)
 
     def check_port_counters(self):
         '''Filter telnet port counters, create ports and change status'''
@@ -116,7 +116,7 @@ class Host(models.Model):
                             update_fields.extend(['error_counter', 'counter_last_change', 'counter_status']) 
                             # Add port log if counter changed
                             port_object.update_log()
-                            self.log('Counter updated to: {}'.format(error_counter), 'info')
+                            self.log('Counter updated to: {}'.format(error_counter))
                         else:
                             old_counter_status = port_object.counter_status
                             delta_1_day = now - datetime.timedelta(days=1)
@@ -215,7 +215,7 @@ class Host(models.Model):
         #  if status info changed, update status and logs
         if old_status_info != self.status_info:
             self.log('Status info changed from "{}" to "{}"'
-                     .format(old_status_info, self.status_info), 'info')
+                     .format(old_status_info, self.status_info))
             self.last_status_change = now
             update_fields.extend(['last_status_change', 'status', 'status_info'])
             self.update_log()
