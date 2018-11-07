@@ -16,5 +16,6 @@ class HostAdmin(admin.ModelAdmin):
     search_fields = ['ipv4', 'name', 'secretary', 'circuit', 'network', 'status']
     inlines = [PortInLines]
     actions = None
+    list_per_page = 15
 
 admin.site.register(Host, HostAdmin)
