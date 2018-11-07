@@ -20,5 +20,5 @@ class Command(BaseCommand):
                 sys.stdout.write('{:15} - {:15} - {}\n'.format(host.ipv4, gateway, host.name))
 
     def handle(self, *args, **options):
-        self.logger.debug('show gateways started')
+        self.logger.info('Show gateways started')
         self.main()

@@ -50,6 +50,14 @@ class Host(models.Model):
         return not subprocess.call('ping {} -c 1 -W 2 -q > /dev/null 2>&1'\
                                     .format(self.ipv4), shell=True)
 
+    def log(self, message, level='debug'):
+        if level == 'info':
+            self.logger.info('{:14} {}'.format(self.ipv4, message))
+        elif level == 'warning':
+            self.logger.warning('{:14} {}'.format(self.ipv4, message))
+        else:
+            self.logger.debug('{:14} {}'.format(self.ipv4, message))
+
     def check_monitored_ports_status(self):
         '''Filter telnet manually added monitored ports'''
         if self.monitored_ports.count() > 0:
@@ -60,14 +68,14 @@ class Host(models.Model):
                     commands.append('show port status {0}'.format(port.number))
                 return commands
 
-            self.logger.info('{:14} telnet to check monitored ports'.format(self.ipv4))
+            self.log('Telnet to check monitored ports')
             telnet_output = self.telnet(telnet_commands_monitored_ports())    
             if telnet_output != '':
                 for line in telnet_output.lower().replace('\r', '').split('\n'):
                     if re.search(r'[no ,in]valid', line):
                         self.status = self.DANGER
                         self.status_info = 'Invalid port registered or module is Down'
-                        self.logger.warning('{:14} {}'.format(self.ipv4, self.status_info.lower()))
+                        self.log(self.status_info, 'warning')
                         continue
                     for port in self.monitored_ports:
                         if re.search(r'{}.*down'.format(port.number), line):
@@ -77,7 +85,7 @@ class Host(models.Model):
                                 self.status_info = msg
                             else:
                                 self.status_info += ', {}'.format(msg)
-                            self.logger.info('{:14} {}'.format(self.ipv4, self.status_info.lower()))
+                            self.log(self.status_info, 'info')
 
     def check_port_counters(self):
         '''Filter telnet port counters, create ports and change status'''
@@ -90,17 +98,17 @@ class Host(models.Model):
                     # Create port if not exists
                     if re.search(r'^port:', line):
                         port_number = line.split()[1]
-                        self.logger.info('{:14} Filtered Port: {}'.format(self.ipv4, port_number))
+                        self.log('Filtered Port: {}'.format(port_number))
                         port_object = Port.objects.get_or_create(host=self, number=port_number)[0]
                     elif re.search(r'^port :', line):
                         port_number = line.split()[2]
-                        self.logger.info('{:14} Filtered Port: {}'.format(self.ipv4, port_number))
+                        self.log('Filtered Port: {}'.format(port_number))
                         port_object = Port.objects.get_or_create(host=self, number=port_number)[0]
                     # Update counter and status
                     elif re.search(r'^in errors', line):
                         error_counter = int(line.split()[2])
-                        self.logger.info('{:14} Filtered Counter: {}'.format(self.ipv4, error_counter))
-                        self.logger.info('{:14} Old Counter: {}'.format(self.ipv4, port_object.error_counter))
+                        self.log('Filtered Counter: {}'.format(error_counter))
+                        self.log('Old Counter: {}'.format(port_object.error_counter))
                         # Only save updated fields
                         update_fields=[]
                         # If conter updated, change var and status
@@ -111,7 +119,7 @@ class Host(models.Model):
                             update_fields.extend(['error_counter', 'counter_last_change', 'counter_status']) 
                             # Add port log if counter changed
                             port_object.update_log()
-                            self.logger.info('{:14} counter updated to: {}'.format(self.ipv4, error_counter))
+                            self.log('Counter updated to: {}'.format(error_counter), 'info')
                         else:
                             old_counter_status = port_object.counter_status
                             delta_1_day = now - datetime.timedelta(days=1)
@@ -125,9 +133,9 @@ class Host(models.Model):
                         if len(update_fields) > 0:
                             try:
                                 port_object.save(update_fields=update_fields)
-                                self.logger.info('{:14} save port log to db'.format(self.ipv4))
+                                self.log('Save port log to database')
                             except Exception as ex:
-                                self.logger.warning('{:14} db saving port error: {}'.format(self.ipv4, ex))
+                                self.log(ex, 'warning')
                         port_object = None
 
     def check_gateway(self):
@@ -138,18 +146,18 @@ class Host(models.Model):
             if telnet_output != '':
                 for line in telnet_output.lower().replace('\r', '').split('\n'):
                     if re.search(r'0.0.0.0', line):
-                        self.logger.debug('{:14} Gateway telnet line: {}'.format(self.ipv4, line))
+                        self.log('Gateway telnet line: {}'.format(line))
                         if re.search('^\s*s', line):
-                            self.logger.info('{:14} Gateway: {}'.format(self.ipv4, line.split()[4]))
+                            self.log('Filtered gateway: {}'.format(line.split()[4]))
                             return line.split()[4]
                         else:                            
-                            self.logger.info('{:14} Gateway: {}'.format(self.ipv4, line.split()[1]))
+                            self.log('Filtered gateway: {}'.format(line.split()[1]))
                             return line.split()[1]
 
 
     def telnet(self, commands):
         '''Telnet connection and get registered ports status'''
-        self.logger.debug('{:14} telnet started'.format(self.ipv4))
+        self.log('Telnet started')
         telnet_output = ''
         try:
             tn = telnetlib.Telnet(self.ipv4, timeout=TELNET_TIMEOUT)
@@ -162,18 +170,18 @@ class Host(models.Model):
             if match_object.group(0) == b"Username:":
                 self.status = self.DANGER
                 self.status_info = 'Invalid telnet user or password'
-                self.logger.warning('{:14} {}'.format(self.ipv4, self.status_info.lower()))
+                self.log(self.status_info, 'warning')
             else:
                 for tn_command in commands:
-                    self.logger.debug('{:14} {}'.format(self.ipv4, tn_command))
+                    self.log(tn_command)
                     tn.write(tn_command.encode('ascii') + b"\n")
                 tn.write(b"exit\n")
-                self.logger.debug('{:14} telnet finished'.format(self.ipv4))
+                self.log('Telnet finished')
                 telnet_output = tn.read_all().decode('ascii')
         except Exception as ex:
             self.status = self.DANGER
             self.status_info = 'Telnet error: {0}'.format(ex)
-            self.logger.warning('{:14} {}'.format(self.ipv4, self.status_info.lower()))
+            self.log(self.status_info, 'warning')
         finally:
             return telnet_output
 
@@ -182,11 +190,10 @@ class Host(models.Model):
         if self.isalive:
             self.status = self.SUCCESS
             self.status_info = 'Connected'
-            self.logger.info('{:14} {}'.format(self.ipv4, self.status_info.lower()))
         else:
             self.status = self.DANGER
             self.status_info = 'Connection Lost'
-            self.logger.info('{:14} {}'.format(self.ipv4, self.status_info.lower()))
+        self.log(self.status_info)
 
     def update_log(self):
         '''Add new host log and remove old logs based on MAX_LOG_LINES'''
@@ -196,7 +203,7 @@ class Host(models.Model):
             HostLog.objects.filter(pk__in=HostLog.objects.filter(host=self).order_by('-status_change')
                                 .values_list('pk')[MAX_LOG_LINES:]).delete()
         except Exception as ex:
-            self.logger.warning('{:14} db saving error: {}'.format(self.ipv4, ex))
+            self.log(ex, 'warning')
 
     def check_and_update(self):
         '''The 'main' function of monitord, check/update host and logs'''
@@ -210,8 +217,8 @@ class Host(models.Model):
         self.check_monitored_ports_status()
         #  if status info changed, update status and logs
         if old_status_info != self.status_info:
-            self.logger.info('{:14} status info changed from "{}" to "{}"'
-                              .format(self.ipv4, old_status_info.lower(), self.status_info.lower()))
+            self.log('Status info changed from "{}" to "{}"'
+                     .format(old_status_info, self.status_info), 'info')
             self.last_status_change = now
             update_fields.extend(['last_status_change', 'status', 'status_info'])
             self.update_log()
@@ -225,7 +232,7 @@ class Host(models.Model):
         try:
             self.save(update_fields=update_fields)
         except Exception as ex:
-            self.logger.warning('{:14} db saving host error: {}'.format(self.ipv4, ex))
+            self.log(ex, 'warning')
 
 
 class HostLog(models.Model):
@@ -257,7 +264,7 @@ class Port(models.Model):
             PortLog.objects.filter(pk__in=PortLog.objects.filter(port=self).order_by('-counter_last_change')
                                 .values_list('pk')[MAX_LOG_LINES:]).delete()
         except Exception as ex:
-            Host.logger.warning('{:14} db saving port error: {}'.format(self.host.ipv4, ex))
+            Host.log(ex, 'warning')
 
     def __str__(self):
         return self.number

@@ -17,5 +17,5 @@ class Command(BaseCommand):
                 time.sleep(WAIT_FOR_NEXT)
 
     def handle(self, *args, **options):
-        self.logger.info('monitord started')
+        self.logger.info('Portcounterd started')
         self.loop()
