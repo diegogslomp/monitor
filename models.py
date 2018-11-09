@@ -1,7 +1,7 @@
 from django.db import models
 from django.utils import timezone
-from .config.base import USER, PASSWORD, TELNET_TIMEOUT
-from .config.base import DAYS_FROM_DANGER_TO_WARNING, MAX_LOG_LINES
+from .settings import USER, PASSWORD, TELNET_TIMEOUT
+from .settings import DAYS_FROM_DANGER_TO_WARNING, MAX_LOG_LINES
 import datetime
 import logging
 import re
