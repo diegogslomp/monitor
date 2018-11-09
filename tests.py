@@ -3,7 +3,7 @@ from django.utils import timezone
 from django.urls import reverse
 from django.test import TestCase
 
-from .config.base import DAYS_FROM_DANGER_TO_WARNING
+from .settings import DAYS_FROM_DANGER_TO_WARNING
 from .models import Host
 
 class HostModelTest(TestCase):

@@ -1,6 +1,6 @@
 from django.core.management.base import BaseCommand
 from monitor.models import Host
-from monitor.config.base import WAIT_FOR_NEXT
+from monitor.settings import WAIT_FOR_NEXT
 import time
 import logging
 
