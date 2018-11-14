@@ -1,10 +1,13 @@
 import datetime
+import logging
 from django.utils import timezone
 from django.urls import reverse
 from django.test import TestCase
 
 from .settings import DAYS_FROM_DANGER_TO_WARNING
 from .models import Host
+
+logging.disable(logging.CRITICAL)
 
 class HostModelTest(TestCase):
     def test_online_host(self):
