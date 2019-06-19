@@ -1,11 +1,11 @@
 from django.views.generic import DetailView, ListView, TemplateView
-from monitor.models import Host, Port, PortLog
+from .models import Host, Port, PortLog
 
 
 class IndexView(TemplateView):
 
     template_name = 'monitor/index.html'
-    
+
 
 class HostListView(ListView):
 
