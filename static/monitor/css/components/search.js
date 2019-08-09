@@ -1,5 +1,5 @@
 /*!
- * # Semantic UI 2.4.1 - Search
+ * # Semantic UI 2.3.0 - Search
  * http://github.com/semantic-org/semantic-ui/
  *
  *
@@ -10,7 +10,7 @@
 
 ;(function ($, window, document, undefined) {
 
-'use strict';
+"use strict";
 
 window = (typeof window != 'undefined' && window.Math == Math)
   ? window
@@ -337,7 +337,7 @@ $.fn.search = function(parameters) {
               apiSettings = {
                 debug             : settings.debug,
                 on                : false,
-                cache             : settings.cache,
+                cache             : true,
                 action            : 'search',
                 urlData           : {
                   query : searchTerm
@@ -596,10 +596,9 @@ $.fn.search = function(parameters) {
               addResult = function(array, result) {
                 var
                   notResult      = ($.inArray(result, results) == -1),
-                  notFuzzyResult = ($.inArray(result, fuzzyResults) == -1),
-                  notExactResults = ($.inArray(result, exactResults) == -1)
+                  notFuzzyResult = ($.inArray(result, fuzzyResults) == -1)
                 ;
-                if(notResult && notFuzzyResult && notExactResults) {
+                if(notResult && notFuzzyResult) {
                   array.push(result);
                 }
               }
