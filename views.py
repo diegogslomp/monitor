@@ -55,7 +55,7 @@ class DioListView(ListView):
     context_object_name = 'dio_list'
 
     def get_queryset(self):
-        return Dio.objects.all().order_by('pop')
+        return Dio.objects.all().order_by('pop', 'name')
 
 class DioDetailView(TemplateView):
     template_name = 'monitor/dio_detail.html'
