@@ -21,12 +21,12 @@
     </table>
   
   
-    <table class="ui fixed single line very compact striped table">
+    <table class="ui fixed single line very compact selectable striped table">
       <tbody>
         {% if fibra_list.count > 0 %}
         <thead>
-          <td><strong>DIO Port</strong></td>
-          <td><strong>Switch Port</strong></td>
+          <td class="two wide column"><strong>DIO Port</strong></td>
+          <td class="two wide column"><strong>Switch Port</strong></td>
           <td><strong>Description</strong></td>
         </thead>
         {% for fibra in fibra_list %}

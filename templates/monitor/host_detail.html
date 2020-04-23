@@ -52,11 +52,11 @@
       <i class="database icon"></i>
       Last Host Logs
     </h4>
-    <table class="ui very compact single line table">
+    <table class="ui very compact single line selectable table">
       <tbody>
         {% if host.hostlog_set.count > 0 %}
         <thead>
-          <td><strong>Status Info</strong></td>
+          <td class="two wide column"><strong>Status Info</strong></td>
           <td><strong>Last Status Change</strong></td>
         </thead>
         {% for log in host.hostlog_set.all|dictsortreversed:"status_change" %}
