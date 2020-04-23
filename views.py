@@ -62,7 +62,7 @@ class DioDetailView(TemplateView):
 
     def get_context_data(self, **kwargs):
         dio = Dio.objects.get(id=self.kwargs['pk'])
-        fibra_list = Fibra.objects.filter(dio=dio)
+        fibra_list = Fibra.objects.filter(dio=dio).order_by('number')
         context = super(DioDetailView, self).get_context_data(**kwargs)
         context['dio'] = dio
         context['fibra_list'] = fibra_list
