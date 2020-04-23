@@ -3,8 +3,9 @@
 <table class="ui fixed single line very compact striped table">
   <thead>
     <tr>
-      <th class="five wide column"><strong>DIO</strong></th>
-      <th><strong>POP</strong></th>
+      
+      <th class="four wide column"><strong>POP</strong></th>
+      <th><strong>DIO</strong></th>
     </tr>
   </thead>
   <tbody>
@@ -12,12 +13,12 @@
     <tr>
       <td class="selectable">
         <a href="{% url 'monitor:dio_detail' dio.id %}"
-          ><strong>{{ dio.name }}</strong></a
+          ><strong>{{ dio.pop }}</strong></a
         >
       </td>
       <td class="selectable">
         <a href="{% url 'monitor:dio_detail' dio.id %}"
-          ><strong>{{ dio.pop }}</strong></a
+          ><strong>{{ dio.name }}</strong></a
         >
       </td>
     </tr>
