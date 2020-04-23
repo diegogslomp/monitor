@@ -13,20 +13,26 @@
           <td class="two wide column">Name</td>
           <td>{{ dio.name }}</td>
         </tr>
+        <tr>
+          <td class="two wide column">Pop</td>
+          <td>{{ dio.pop }}</td>
+        </tr>
       </tbody>
     </table>
-  </div>
-  <div class="ui segment">
+  
+  
     <table class="ui fixed single line very compact striped table">
       <tbody>
         {% if fibra_list.count > 0 %}
         <thead>
-          <td><strong>Port Number</strong></td>
+          <td><strong>DIO Port</strong></td>
+          <td><strong>Switch Port</strong></td>
           <td><strong>Description</strong></td>
         </thead>
         {% for fibra in fibra_list %}
         <tr>
           <td>{{ fibra.number }}</td>
+          <td>{{ fibra.port }}</td>
           <td>{{ fibra.description }}</td>
         </tr>
         {% endfor %} {% else %}

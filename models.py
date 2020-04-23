@@ -311,6 +311,7 @@ class Fibra(models.Model):
     '''Portas/Fibras dos DIO'''
     dio = models.ForeignKey(Dio, on_delete=models.CASCADE)
     number = models.CharField(max_length=20)
+    port = models.CharField(max_length=20, null=True)
     description = models.CharField(max_length=200, blank=True)
 
     def __str__(self):
