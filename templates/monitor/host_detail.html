@@ -3,6 +3,11 @@
 <div class="ui message {{ host.get_status_display }}">
   <div class="ui segment">
     <a
+      href="{% url 'monitor:dio_list' %}"
+      class="ui basic button"
+      >DIOs</a
+    >
+    <a
       href="{% url 'monitor:index' %}"
       class="ui {{ host.get_status_display }} basic button"
       >Return</a

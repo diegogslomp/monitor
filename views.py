@@ -1,5 +1,5 @@
 from django.views.generic import ListView, TemplateView
-from .models import Host, Port, PortLog
+from .models import Host, Port, PortLog, Dio, Fibra
 
 
 class IndexView(TemplateView):
@@ -18,7 +18,7 @@ class HostListView(ListView):
 
 class HostDetailView(TemplateView):
 
-    template_name = 'monitor/detail.html'
+    template_name = 'monitor/host_detail.html'
 
     def get_context_data(self, **kwargs):
         host = Host.objects.get(id=self.kwargs['pk'])
@@ -48,3 +48,22 @@ class PortListView(ListView):
             '-counter_status',
             'error_counter'
         )
+
+
+class DioListView(ListView):
+    template_name = 'monitor/dio_list.html'
+    context_object_name = 'dio_list'
+
+    def get_queryset(self):
+        return Dio.objects.all().order_by('name')
+
+class DioDetailView(TemplateView):
+    template_name = 'monitor/dio_detail.html'
+
+    def get_context_data(self, **kwargs):
+        dio = Dio.objects.get(id=self.kwargs['pk'])
+        fibra_list = Fibra.objects.filter(dio=dio)
+        context = super(DioDetailView, self).get_context_data(**kwargs)
+        context['dio'] = dio
+        context['fibra_list'] = fibra_list
+        return context

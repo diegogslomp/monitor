@@ -1,0 +1,29 @@
+{% extends "monitor/base.html" %} {% block title %} DIOs {% endblock %} 
+{% block content %} {% if dio_list %}
+<table class="ui fixed single line very compact striped table">
+  <thead>
+    <tr>
+      <th class><strong>DIO</strong></th>
+      <th class><strong>POP</strong></th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for dio in dio_list %}
+    <tr>
+      <td class="selectable">
+        <a href="{% url 'monitor:dio_detail' dio.id %}"
+          ><strong>{{ dio.name }}</strong></a
+        >
+      </td>
+      <td class="selectable">
+        <a href="{% url 'monitor:dio_detail' dio.id %}"
+          ><strong>{{ dio.pop }}</strong></a
+        >
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<p>No DIOs are available.</p>
+{% endif %} {% endblock %}

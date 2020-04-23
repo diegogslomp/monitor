@@ -1,0 +1,41 @@
+{% extends "monitor/base.html" %} 
+{% block title %} Detailed DIO {% endblock %}
+{% block content %}
+<div class="ui message">
+  <div class="ui segment">
+    <a href="{% url 'monitor:index' %}" class="ui basic button" >Monitor</a>
+    <a href="{% url 'monitor:dio_list' %}" class="ui basic button" >Return</a>
+  </div>
+  <div class="ui segment">
+    <table class="ui very compact definition table">
+      <tbody>
+        <tr>
+          <td class="two wide column">Name</td>
+          <td>{{ dio.name }}</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="ui segment">
+    <table class="ui fixed single line very compact striped table">
+      <tbody>
+        {% if fibra_list.count > 0 %}
+        <thead>
+          <td><strong>Port Number</strong></td>
+          <td><strong>Description</strong></td>
+        </thead>
+        {% for fibra in fibra_list %}
+        <tr>
+          <td>{{ fibra.number }}</td>
+          <td>{{ fibra.description }}</td>
+        </tr>
+        {% endfor %} {% else %}
+        <tr>
+          <td><span>No fibra port registered yet</span></td>
+        </tr>
+        {% endif %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
