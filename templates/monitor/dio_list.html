@@ -1,30 +1,27 @@
-{% extends "monitor/base.html" %} {% block title %} DIOs {% endblock %} 
+{% extends "monitor/base.html" %} {% block title %} DIOs {% endblock %}
 {% block content %} {% if dio_list %}
-<table class="ui fixed single line very compact striped table">
-  <thead>
-    <tr>
-      
-      <th class="four wide column"><strong>POP</strong></th>
-      <th><strong>DIO</strong></th>
-    </tr>
-  </thead>
-  <tbody>
-    {% for dio in dio_list %}
-    <tr>
-      <td class="selectable">
-        <a href="{% url 'monitor:dio_detail' dio.id %}"
-          ><strong>{{ dio.pop }}</strong></a
-        >
-      </td>
-      <td class="selectable">
-        <a href="{% url 'monitor:dio_detail' dio.id %}"
-          ><strong>{{ dio.name }}</strong></a
-        >
-      </td>
-    </tr>
-    {% endfor %}
-  </tbody>
-</table>
-{% else %}
-<p>No DIOs are available.</p>
-{% endif %} {% endblock %}
+<div class="ui container">
+  <table class="ui fixed single line very compact striped table">
+    <thead>
+      <tr>
+        <th><strong>POP</strong></th>
+        <th><strong>DIO</strong></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for dio in dio_list %}
+      <tr>
+        <td class="selectable">
+          <a href="{% url 'monitor:dio_detail' dio.id %}"><strong>{{ dio.pop }}</strong></a>
+        </td>
+        <td class="selectable">
+          <a href="{% url 'monitor:dio_detail' dio.id %}"><strong>{{ dio.name }}</strong></a>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p>No DIOs are available.</p>
+  {% endif %} {% endblock %}
+</div>

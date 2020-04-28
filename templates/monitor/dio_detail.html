@@ -1,49 +1,51 @@
-{% extends "monitor/base.html" %} 
+{% extends "monitor/base.html" %}
 {% block title %} Detailed DIO {% endblock %}
 {% block content %}
-<div class="ui message">
-  <div class="ui segment">
-    <a href="{% url 'monitor:index' %}" class="ui primary basic button" >Monitor</a>
-    <a href="{% url 'monitor:dio_list' %}" class="ui secondary basic button" >Return</a>
-    <a href="{% url 'admin:monitor_dio_change' dio.id %}" class="ui negative basic button" >Edit</a>
-    
-  </div>
-  <div class="ui segment">
-    <table class="ui very compact definition table">
-      <tbody>
-        <tr>
-          <td class="two wide column">Name</td>
-          <td>{{ dio.name }}</td>
-        </tr>
-        <tr>
-          <td class="two wide column">Pop</td>
-          <td>{{ dio.pop }}</td>
-        </tr>
-      </tbody>
-    </table>
-  
-  
-    <table class="ui fixed single line very compact selectable striped table">
-      <tbody>
-        {% if fibra_list.count > 0 %}
-        <thead>
-          <td class="two wide column"><strong>DIO Port</strong></td>
-          <td class="two wide column"><strong>Switch Port</strong></td>
-          <td><strong>Description</strong></td>
-        </thead>
-        {% for fibra in fibra_list %}
-        <tr>
-          <td>{{ fibra.number }}</td>
-          <td>{{ fibra.port }}</td>
-          <td>{{ fibra.description }}</td>
-        </tr>
-        {% endfor %} {% else %}
-        <tr>
-          <td><span>No fibra port registered yet</span></td>
-        </tr>
-        {% endif %}
-      </tbody>
-    </table>
+<div class="ui container">
+  <div class="ui message">
+    <div class="ui segment">
+      <a href="{% url 'monitor:index' %}" class="ui primary basic button">Monitor</a>
+      <a href="{% url 'monitor:dio_list' %}" class="ui secondary basic button">Return</a>
+      <a href="{% url 'admin:monitor_dio_change' dio.id %}" class="ui negative basic button">Edit</a>
+
+    </div>
+    <div class="ui segment">
+      <table class="ui very compact definition table">
+        <tbody>
+          <tr>
+            <td>Name</td>
+            <td>{{ dio.name }}</td>
+          </tr>
+          <tr>
+            <td>Pop</td>
+            <td>{{ dio.pop }}</td>
+          </tr>
+        </tbody>
+      </table>
+
+
+      <table class="ui fixed single line very compact selectable striped table">
+        <tbody>
+          {% if fibra_list.count > 0 %}
+          <thead>
+            <td><strong>DIO Port</strong></td>
+            <td><strong>Switch Port</strong></td>
+            <td><strong>Description</strong></td>
+          </thead>
+          {% for fibra in fibra_list %}
+          <tr>
+            <td>{{ fibra.number }}</td>
+            <td>{{ fibra.port }}</td>
+            <td>{{ fibra.description }}</td>
+          </tr>
+          {% endfor %} {% else %}
+          <tr>
+            <td><span>No fibra port registered yet</span></td>
+          </tr>
+          {% endif %}
+        </tbody>
+      </table>
+    </div>
   </div>
 </div>
 {% endblock %}
