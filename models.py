@@ -4,6 +4,7 @@ from .settings import USER, PASSWORD, TELNET_TIMEOUT
 from .settings import DAYS_FROM_DANGER_TO_WARNING, MAX_LOG_LINES
 import datetime
 import logging
+import ipaddress
 import re
 import subprocess
 import telnetlib
