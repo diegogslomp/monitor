@@ -42,7 +42,7 @@ class PortListView(ListView):
     def get_queryset(self):
         return Port.objects.filter(
             counter_status__gt=2,
-            error_counter__gt=50
+            error_counter__gt=500
         ).order_by(
             '-counter_last_change',
             '-counter_status',
@@ -56,6 +56,7 @@ class DioListView(ListView):
 
     def get_queryset(self):
         return Dio.objects.all().order_by('pop', 'name')
+
 
 class DioDetailView(TemplateView):
     template_name = 'monitor/dio_detail.html'
