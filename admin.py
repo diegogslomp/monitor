@@ -34,5 +34,13 @@ class DioAdmin(admin.ModelAdmin):
     inlines = [FibraInLines]
 
 
+class PortAdmin(admin.ModelAdmin):
+    list_per_page = 15
+    list_display = ('host', 'number', 'error_counter', 'counter_last_change',)
+    ordering = ('-counter_last_change',)
+    actions = None
+
+
 admin.site.register(Host, HostAdmin)
 admin.site.register(Dio, DioAdmin)
+admin.site.register(Port, PortAdmin)
