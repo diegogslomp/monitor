@@ -26,9 +26,13 @@ class HostAdmin(admin.ModelAdmin):
 
 class FibraAdmin(admin.ModelAdmin):
     model = Fibra
-    list_display = ('dio', 'number', 'port', 'description')
+    list_display = ('dio', 'get_pop', 'number', 'port', 'description')
     search_fields = ['dio__name', 'number', 'port', 'description']
     actions = None
+
+    def get_pop(self, obj):
+        return obj.dio.pop
+    get_pop.short_description = 'Pop'
 
 
 class FibraInLines(admin.TabularInline):
