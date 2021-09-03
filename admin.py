@@ -24,6 +24,13 @@ class HostAdmin(admin.ModelAdmin):
     list_per_page = 15
 
 
+class FibraAdmin(admin.ModelAdmin):
+    model = Fibra
+    list_display = ('dio', 'number', 'port', 'description')
+    search_fields = ['dio__name', 'number', 'port', 'description']
+    actions = None
+
+
 class FibraInLines(admin.TabularInline):
     model = Fibra
 
@@ -43,4 +50,5 @@ class PortAdmin(admin.ModelAdmin):
 
 admin.site.register(Host, HostAdmin)
 admin.site.register(Dio, DioAdmin)
+admin.site.register(Fibra, FibraAdmin)
 admin.site.register(Port, PortAdmin)
