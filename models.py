@@ -50,7 +50,7 @@ class Host(models.Model):
 
     @property
     def isalive(self):
-        return not subprocess.call('ping {} -c 1 -W 2 -q > /dev/null 2>&1'
+        return not subprocess.call('ping {} -c 2 -W 2 -q > /dev/null 2>&1'
                                    .format(self.ipv4), shell=True)
 
     def log(self, message, level='debug'):
