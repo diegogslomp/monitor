@@ -50,9 +50,13 @@ class DioAdmin(AbstractModelAdmin):
 
 
 class PortAdmin(AbstractModelAdmin):
-    list_display = ('host', 'number', 'error_counter', 'counter_last_change',)
-    search_fields = ['host__name', ]
+    list_display = ('host', 'ip_', 'number',
+                    'error_counter', 'counter_last_change',)
+    search_fields = ['host__name', 'host__ipv4', ]
     ordering = ('-counter_last_change',)
+
+    def ip_(self, obj):
+        return obj.host.ipv4
 
 
 admin.site.register(Host, HostAdmin)
