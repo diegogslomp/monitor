@@ -51,6 +51,7 @@ class DioAdmin(AbstractModelAdmin):
 
 class PortAdmin(AbstractModelAdmin):
     list_display = ('host', 'number', 'error_counter', 'counter_last_change',)
+    search_fields = ['host__name', ]
     ordering = ('-counter_last_change',)
 
 
