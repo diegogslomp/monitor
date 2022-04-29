@@ -8,7 +8,7 @@ import ipaddress
 import re
 import subprocess
 import telnetlib
-
+import os
 
 class Host(models.Model):
     name = models.CharField(max_length=200)
@@ -52,6 +52,14 @@ class Host(models.Model):
     def isalive(self):
         return not subprocess.call('ping {} -c 1 -W 3 -q > /dev/null 2>&1'
                                    .format(self.ipv4), shell=True)
+
+    def send_status_message(self):
+        token = os.getenv('TELEGRAM_TOKEN')
+        chat_id = os.getenv('TELEGRAM_CHAT_ID')
+        url='https://api.telegram.org/bot{}/sendMessage'.format(token)
+        message = '{} - {}'.format(self.name, self.status_info)
+        return subprocess.call('curl -s -X POST {} -d chat_id={} -d text="{}"'
+                               .format(url, chat_id, message), shell=True)
 
     def log(self, message, level='debug'):
         if level == 'info':
@@ -212,6 +220,7 @@ class Host(models.Model):
                                    status_info=self.status_info, status_change=self.last_status_change)
             HostLog.objects.filter(pk__in=HostLog.objects.filter(host=self).order_by('-status_change')
                                    .values_list('pk')[MAX_LOG_LINES:]).delete()
+            self.send_status_message() 
         except Exception as ex:
             self.log(ex, 'warning')
 
