@@ -50,7 +50,7 @@ class Host(models.Model):
 
     @property
     def isalive(self):
-        return not subprocess.call('ping {} -c 1 -W 3 -q > /dev/null 2>&1'
+        return not subprocess.call('ping -c 3 -w 1 -W 5 {} | grep ttl='
                                    .format(self.ipv4), shell=True)
 
     def send_status_message(self):
@@ -179,12 +179,12 @@ class Host(models.Model):
         telnet_output = ''
         try:
             tn = telnetlib.Telnet(self.ipv4, timeout=TELNET_TIMEOUT)
-            tn.read_until(b"Username:")
+            tn.read_until(b"Username:", timeout=TELNET_TIMEOUT)
             tn.write(USER.encode('ascii') + b"\n")
-            tn.read_until(b"Password:")
+            tn.read_until(b"Password:", timeout=TELNET_TIMEOUT)
             tn.write(PASSWORD.encode('ascii') + b"\n")
             # '->' for successful login or 'Username' for wrong credentials
-            match_object = tn.expect([b"->", b"Username:"])[1]
+            match_object = tn.expect([b"->", b"Username:"], timeout=TELNET_TIMEOUT)[1]
             if match_object.group(0) == b"Username:":
                 self.status = self.DANGER
                 self.status_info = 'Invalid telnet user or password'
@@ -220,7 +220,7 @@ class Host(models.Model):
                                    status_info=self.status_info, status_change=self.last_status_change)
             HostLog.objects.filter(pk__in=HostLog.objects.filter(host=self).order_by('-status_change')
                                    .values_list('pk')[MAX_LOG_LINES:]).delete()
-            self.send_status_message() 
+            self.send_status_message()
         except Exception as ex:
             self.log(ex, 'warning')
 
