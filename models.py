@@ -9,6 +9,7 @@ import re
 import subprocess
 import telnetlib
 import os
+import sys
 
 class Host(models.Model):
     name = models.CharField(max_length=200)
@@ -57,9 +58,10 @@ class Host(models.Model):
         token = os.getenv('TELEGRAM_TOKEN')
         chat_id = os.getenv('TELEGRAM_CHAT_ID')
         url='https://api.telegram.org/bot{}/sendMessage'.format(token)
-        icon = '\u2705' if self.status < self.WARNING else '\u274C'
-        decoded_icon = '{}'.format(icon).encode('utf-8').decode('iso8859-1')
-        message = '{} {} - {}'.format(decoded_icon, self.name, self.status_info)
+        # icon = '\u2705' if self.status < self.WARNING else '\u274C'
+        # decoded_icon = '{}'.format(icon).encode('utf-8').decode(sys.getfilesystemencoding())
+        message = '{} - {}'.format(self.name, self.status_info)
+        self.log(message, 'info')
         return subprocess.call('curl -s -X POST {} -d chat_id={} -d text="{}"'
                                .format(url, chat_id, message), shell=True)
 
