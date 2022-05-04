@@ -51,7 +51,7 @@ class Host(models.Model):
 
     @property
     def isalive(self):
-        return not subprocess.call('ping -c 3 -w 1 -W 5 {} | grep ttl='
+        return not subprocess.call('ping -c 3 -w 1 -W 5 {} | grep ttl= > /dev/null 2>&1'
                                    .format(self.ipv4), shell=True)
 
     def send_status_message(self):
