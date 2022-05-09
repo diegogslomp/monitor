@@ -22,6 +22,8 @@ class Host(models.Model):
     network = models.GenericIPAddressField(
         protocol='IPv4', null=True, blank=True)
     circuit = models.IntegerField(null=True, blank=True)
+    retries = models.IntegerField(default=0)
+    max_retries = models.IntegerField(default=0)
     secretary = models.CharField(max_length=200, null=True, blank=True)
     DEFAULT = 0
     SUCCESS = 1
@@ -82,7 +84,6 @@ class Host(models.Model):
                     commands.append('show port status {0}'.format(port.number))
                 return commands
 
-            self.log('Telnet to check monitored ports')
             telnet_output = self.telnet(telnet_commands_monitored_ports())
             if telnet_output != '':
                 for line in telnet_output.lower().replace('\r', '').split('\n'):
@@ -187,11 +188,11 @@ class Host(models.Model):
             tn.read_until(b"Password:", timeout=TELNET_TIMEOUT)
             tn.write(PASSWORD.encode('ascii') + b"\n")
             # '->' for successful login or 'Username' for wrong credentials
-            match_object = tn.expect([b"->", b"Username:"], timeout=TELNET_TIMEOUT)[1]
-            if match_object.group(0) == b"Username:":
-                self.status = self.DANGER
-                self.status_info = 'Invalid telnet user or password'
-                self.log(self.status_info, 'warning')
+            match_object = tn.expect([b"->", b"Username:"], timeout=TELNET_TIMEOUT)
+            expect_match = match_object[1].group(0)
+            self.log('Match: {}'.format(expect_match))
+            if expect_match == b"Username:":
+                raise Exception('Invalid credentials')
             else:
                 for tn_command in commands:
                     self.log(tn_command)
@@ -201,7 +202,7 @@ class Host(models.Model):
                 telnet_output = tn.read_all().decode('ascii')
         except Exception as ex:
             self.status = self.DANGER
-            self.status_info = 'Telnet error: {0}'.format(ex)
+            self.status_info = 'Telnet: {0}'.format(ex)
             self.log(self.status_info, 'warning')
         finally:
             return telnet_output
@@ -237,13 +238,20 @@ class Host(models.Model):
         old_status_info = self.status_info
         self.check_ping()
         self.check_monitored_ports_status()
+        # Update log only if retries reach max_retires
+        if self.status == self.DANGER and self.retries < self.max_retries:
+            self.retries += 1
+            update_fields.extend(['retries'])
+            self.log('{}/{} retry before change status'
+                     .format(self.retries, self.max_retries))
         #  if status info changed, update status and logs
-        if old_status_info != self.status_info:
+        elif old_status_info != self.status_info:
+            self.retries = 0
             self.log('Status info changed from "{}" to "{}"'
                      .format(old_status_info, self.status_info))
             self.last_status_change = now
             update_fields.extend(
-                ['last_status_change', 'status', 'status_info'])
+                ['last_status_change', 'status', 'status_info', 'retries'])
             self.update_log()
         # check if change the status from danger to warning status
         elif self.status == self.DANGER:

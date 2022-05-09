@@ -17,9 +17,9 @@ class PortInLines (admin.TabularInline):
 class HostAdmin(AbstractModelAdmin):
     fieldsets = [
         (None, {'fields': ['secretary',
-                           'circuit', 'name', 'ipv4', 'network']}),
-        ('Daemon Managed Status', {'fields': [
-         'status', 'status_info', 'last_status_change', 'last_check'], 'classes': ['collapse']}),
+                           'circuit', 'name', 'ipv4', 'network', 'max_retries']}),
+        ('Daemon Fields', {'fields': [
+         'status', 'status_info', 'last_status_change', 'last_check', 'retries'], 'classes': ['collapse']}),
     ]
     list_display = ('ipv4', 'name', 'secretary',
                     'circuit', 'network', 'status')
