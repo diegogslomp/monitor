@@ -4,12 +4,10 @@ from .settings import USER, PASSWORD, TELNET_TIMEOUT
 from .settings import DAYS_FROM_DANGER_TO_WARNING, MAX_LOG_LINES
 import datetime
 import logging
-import ipaddress
 import re
 import subprocess
 import telnetlib
 import os
-import sys
 
 class Host(models.Model):
     name = models.CharField(max_length=200)
@@ -105,7 +103,7 @@ class Host(models.Model):
 
     def check_port_counters(self):
         '''Filter telnet port counters, create ports and change status'''
-        if self.isalive and not re.search(r'^RADIO', self.name):
+        if self.isalive:
             now = timezone.now()
             telnet_output = self.telnet(['show port counters'])
             if telnet_output != '':
