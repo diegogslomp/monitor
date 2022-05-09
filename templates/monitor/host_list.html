@@ -6,7 +6,7 @@
       <th><strong>Hostname</strong></th>
       <th class="two wide"><strong>Status</strong></th>
       <th class="three wide"><strong>Last Change</strong></th>
-      <th class="one wide"><strong>Mon</strong></th>
+      <th class="one wide"><strong>Updated</strong></th>
     </tr>
   </thead>
   <tbody>
@@ -23,7 +23,7 @@
       </td>
       <td class="selectable">
         <a
-          href="{% url 'monitor:host_detail' host.id %}"><strong>{{ host.last_status_change|date:"d/m/y - H:i" }}</strong></a>
+          href="{% url 'monitor:host_detail' host.id %}"><strong>{{ host.last_status_change|date:"d/m/y-H:i" }}</strong></a>
       </td>
       <td class="selectable">
         <a href="{% url 'monitor:host_detail' host.id %}"><strong>{{ host.last_check|date:"H:i" }}</strong></a>
