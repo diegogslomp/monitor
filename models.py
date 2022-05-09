@@ -209,10 +209,10 @@ class Host(models.Model):
         '''Ping host, then telnet if there are registered ports'''
         if self.isalive:
             self.status = self.SUCCESS
-            self.status_info = 'Connected'
+            self.status_info = 'Up'
         else:
             self.status = self.DANGER
-            self.status_info = 'Connection Lost'
+            self.status_info = 'Down'
         self.log(self.status_info)
 
     def update_log(self):
