@@ -1,5 +1,5 @@
 /*!
- * # Semantic UI 2.3.0 - Search
+ * # Semantic UI 2.4.0 - Search
  * http://github.com/semantic-org/semantic-ui/
  *
  *
@@ -61,6 +61,8 @@
   -webkit-transform-origin: center top;
           transform-origin: center top;
   white-space: normal;
+  text-align: left;
+  text-transform: none;
   background: #FFFFFF;
   margin-top: 0.5em;
   width: 18em;
@@ -250,6 +252,18 @@
 }
 .ui.search > .results .result.active .description {
   color: rgba(0, 0, 0, 0.85);
+}
+
+/*--------------------
+        Disabled
+----------------------*/
+
+
+/* Disabled */
+.ui.disabled.search {
+  cursor: default;
+  pointer-events: none;
+  opacity: 0.45;
 }
 
 
