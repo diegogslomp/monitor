@@ -241,7 +241,7 @@ class Host(models.Model):
             self.retries += 1
             update_fields.extend(['retries'])
             self.log('{}/{} retry before change status'
-                     .format(self.retries, self.max_retries))
+                     .format(self.retries, self.max_retries), 'warning')
         #  if status info changed, update status and logs
         elif old_status_info != self.status_info:
             self.retries = 0

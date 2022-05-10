@@ -19,7 +19,14 @@
         <a href="{% url 'monitor:host_detail' host.id %}"><strong>{{ host.name|upper }}</strong></a>
       </td>
       <td class="selectable">
-        <a href="{% url 'monitor:host_detail' host.id %}"><strong>{{ host.status_info }}</strong></a>
+        <a href="{% url 'monitor:host_detail' host.id %}">
+          {% if host.status < host.WARNING %}
+          <i class="check icon"></i>
+          {% else %}
+          <i class="x icon"></i>
+          {% endif %}
+          <strong>{{ host.status_info }}</strong>
+        </a>
       </td>
       <td class="selectable">
         <a
