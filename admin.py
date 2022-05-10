@@ -21,8 +21,8 @@ class HostAdmin(AbstractModelAdmin):
         ('Daemon Fields', {'fields': [
          'status', 'status_info', 'last_status_change', 'last_check', 'retries'], 'classes': ['collapse']}),
     ]
-    list_display = ('ipv4', 'name', 'secretary',
-                    'circuit', 'network', 'status')
+    list_display = ('ipv4', 'name', 'secretary', 'circuit', 
+                    'network', 'status', 'max_retries')
     search_fields = ['ipv4', 'name', 'secretary',
                      'circuit', 'network', 'status']
     inlines = [PortInLines]
