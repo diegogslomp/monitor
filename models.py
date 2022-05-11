@@ -38,6 +38,13 @@ class Host(models.Model):
     status = models.IntegerField(choices=STATUS_CHOICES, default=DEFAULT)
     logger = logging.getLogger(__name__)
 
+    def change_status(self, new_status, new_status_info):
+        message = 'Status changed from {}-{} to {}-{}'.format(
+            self.status, self.status_info, new_status, new_status_info)
+        self.status = new_status
+        self.status_info = new_status_info
+        self.log(message)
+
     def __str__(self):
         return self.name
 
@@ -91,7 +98,7 @@ class Host(models.Model):
                         self.log(self.status_info, 'warning')
                         continue
                     for port in self.monitored_ports:
-                        if re.search(r'{}.*down'.format(port.number), line):
+                        if re.search(r'{} .*down'.format(port.number), line):
                             self.status = self.DANGER
                             msg = 'Port {} ({}) is Down'.format(
                                 port.number, line.split()[1])
@@ -159,8 +166,7 @@ class Host(models.Model):
 
     def check_gateway(self):
         '''Filter gateway from telnet output'''
-        if self.isalive and not re.search(r'^RADIO', self.name):
-            now = timezone.now()
+        if self.isalive:
             telnet_output = self.telnet(['show ip route'])
             if telnet_output != '':
                 for line in telnet_output.lower().replace('\r', '').split('\n'):
@@ -177,9 +183,9 @@ class Host(models.Model):
 
     def telnet(self, commands):
         '''Telnet connection and get registered ports status'''
-        self.log('Telnet started')
-        telnet_output = ''
         try:
+            self.log('Telnet started')
+            telnet_output = ''            
             tn = telnetlib.Telnet(self.ipv4, timeout=TELNET_TIMEOUT)
             tn.read_until(b"Username:", timeout=TELNET_TIMEOUT)
             tn.write(USER.encode('ascii') + b"\n")
@@ -188,7 +194,7 @@ class Host(models.Model):
             # '->' for successful login or 'Username' for wrong credentials
             match_object = tn.expect([b"->", b"Username:"], timeout=TELNET_TIMEOUT)
             if match_object[1] == None:
-                raise Exception('Empty expect return')
+                raise Exception('Expected prompt not found')
             expect_match = match_object[1].group(0)
             self.log('Match: {}'.format(expect_match))
             if expect_match == b"Username:":
