@@ -38,12 +38,6 @@ class Host(models.Model):
     status = models.IntegerField(choices=STATUS_CHOICES, default=DEFAULT)
     logger = logging.getLogger(__name__)
 
-    def change_status(self, new_status, new_status_info):
-        message = 'Status changed from {}-{} to {}-{}'.format(
-            self.status, self.status_info, new_status, new_status_info)
-        self.status = new_status
-        self.status_info = new_status_info
-        self.log(message)
 
     def __str__(self):
         return self.name
@@ -83,13 +77,14 @@ class Host(models.Model):
         '''Filter telnet manually added monitored ports'''
         if self.monitored_ports.count() > 0:
 
-            def telnet_commands_monitored_ports():
-                commands = []
+            def telnet_port_status():
+                portlist = []
                 for port in self.monitored_ports:
-                    commands.append('show port status {0}'.format(port.number))
-                return commands
-
-            telnet_output = self.telnet(telnet_commands_monitored_ports())
+                    portlist.append(port.number)
+                portstring = ';'.join(portlist)
+                return ['show port status {}'.format(portstring)]
+                
+            telnet_output = self.telnet(telnet_port_status())
             if telnet_output != '':
                 for line in telnet_output.lower().replace('\r', '').split('\n'):
                     if re.search(r'[no ,in]valid', line):
