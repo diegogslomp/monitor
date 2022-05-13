@@ -57,19 +57,20 @@ class Host(models.Model):
     def send_status_message(self):
         token = os.getenv('TELEGRAM_TOKEN')
         chat_id = os.getenv('TELEGRAM_CHAT_ID')
-        url='https://api.telegram.org/bot{}/sendMessage'.format(token)
+        url=f'https://api.telegram.org/bot{token}/sendMessage'
         icon = '\u2705' if self.status < self.WARNING else '\u274C'
         message = f'{icon} {self.name} - {self.status_info}'
         self.log(message, 'info')
         return subprocess.call(f'curl -s -X POST {url} -d chat_id={chat_id} -d text="{message}" >/dev/null 2>&1', shell=True)
 
     def log(self, message, level='debug'):
+        log_message = f'{self.ipv4:14} {message}'
         if level == 'info':
-            self.logger.info('{:14} {}'.format(self.ipv4, message))
+            self.logger.info(log_message)
         elif level == 'warning':
-            self.logger.warning('{:14} {}'.format(self.ipv4, message))
+            self.logger.warning(log_message)
         else:
-            self.logger.debug('{:14} {}'.format(self.ipv4, message))
+            self.logger.debug(log_message)
 
     def check_monitored_ports_status(self):
         '''Filter telnet manually added monitored ports'''
@@ -96,12 +97,11 @@ class Host(models.Model):
                     for port in self.monitored_ports:
                         if re.search(r'{} .*down'.format(port.number), line):
                             self.status = self.DANGER
-                            msg = 'Port {} ({}) is Down'.format(
-                                port.number, line.split()[1])
+                            msg = f'Port {port.number} ({line.split()[1]}) is Down'
                             if self.status_info == 'Connected':
                                 self.status_info = msg
                             else:
-                                self.status_info += ', {}'.format(msg)
+                                self.status_info += f', {msg}'
                             self.log(self.status_info)
 
     def check_port_counters(self):
@@ -115,20 +115,19 @@ class Host(models.Model):
                     # Create port if not exists
                     if re.search(r'^port:', line):
                         port_number = line.split()[1]
-                        self.log('Filtered Port: {}'.format(port_number))
+                        self.log(f'Filtered Port: {port_number}')
                         port_object = Port.objects.get_or_create(
                             host=self, number=port_number)[0]
                     elif re.search(r'^port :', line):
                         port_number = line.split()[2]
-                        self.log('Filtered Port: {}'.format(port_number))
+                        self.log(f'Filtered Port: {port_number}')
                         port_object = Port.objects.get_or_create(
                             host=self, number=port_number)[0]
                     # Update counter and status
                     elif re.search(r'^in errors', line):
                         error_counter = int(line.split()[2])
-                        self.log('Filtered Counter: {}'.format(error_counter))
-                        self.log('Old Counter: {}'.format(
-                            port_object.error_counter))
+                        self.log(f'Filtered Counter: {error_counter}')
+                        self.log(f'Old Counter: {port_object.error_counter}')
                         # Only save updated fields
                         update_fields = []
                         # If conter updated, change var and status
@@ -140,8 +139,7 @@ class Host(models.Model):
                                 ['error_counter', 'counter_last_change', 'counter_status'])
                             # Add port log if counter changed
                             port_object.update_log()
-                            self.log(
-                                'Counter updated to: {}'.format(error_counter))
+                            self.log(f'Counter updated to: {error_counter}')
                         else:
                             old_counter_status = port_object.counter_status
                             delta_1_day = now - datetime.timedelta(days=1)
@@ -167,15 +165,13 @@ class Host(models.Model):
             if telnet_output != '':
                 for line in telnet_output.lower().replace('\r', '').split('\n'):
                     if re.search(r'0.0.0.0', line):
-                        self.log('Gateway telnet line: {}'.format(line))
+                        self.log(f'Gateway telnet line: {line}')
                         if re.search('^\s*s', line):
-                            self.log('Filtered gateway: {}'.format(
-                                line.split()[4]))
-                            return line.split()[4]
+                            gateway = line.split()[4]
                         else:
-                            self.log('Filtered gateway: {}'.format(
-                                line.split()[1]))
-                            return line.split()[1]
+                            gateway = line.split()[1]                            
+                        self.log(f'Filtered gateway: {gateway}')    
+                        return gateway
 
     def telnet(self, commands):
         '''Telnet connection and get registered ports status'''
@@ -189,8 +185,8 @@ class Host(models.Model):
                 tn.write(PASSWORD.encode('ascii') + b"\n")
                 # '->' for successful login or 'Username' for wrong credentials
                 match_object = tn.expect([b"->", b"Username:"], timeout=TELNET_TIMEOUT)
+                self.log(f'Match: {expect_match}')
                 expect_match = match_object[1].group(0)
-                self.log('Match: {}'.format(expect_match))
                 if expect_match == b"Username:":
                     raise Exception('Invalid credentials')
                 else:
