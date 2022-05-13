@@ -185,8 +185,8 @@ class Host(models.Model):
                 tn.write(PASSWORD.encode('ascii') + b"\n")
                 # '->' for successful login or 'Username' for wrong credentials
                 match_object = tn.expect([b"->", b"Username:"], timeout=TELNET_TIMEOUT)
-                self.log(f'Match: {expect_match}')
                 expect_match = match_object[1].group(0)
+                self.log(f'Match: {expect_match}')
                 if expect_match == b"Username:":
                     raise Exception('Invalid credentials')
                 else:
