@@ -178,29 +178,29 @@ class Host(models.Model):
 
     def telnet(self, commands):
         '''Telnet connection and get registered ports status'''
+        self.log('Telnet started')
+        telnet_output = ''          
         try:
-            self.log('Telnet started')
-            telnet_output = ''            
-            tn = telnetlib.Telnet(self.ipv4, timeout=TELNET_TIMEOUT)
-            tn.read_until(b"Username:", timeout=TELNET_TIMEOUT)
-            tn.write(USER.encode('ascii') + b"\n")
-            tn.read_until(b"Password:", timeout=TELNET_TIMEOUT)
-            tn.write(PASSWORD.encode('ascii') + b"\n")
-            # '->' for successful login or 'Username' for wrong credentials
-            match_object = tn.expect([b"->", b"Username:"], timeout=TELNET_TIMEOUT)
-            if match_object[1] == None:
-                raise Exception('Prompt not found')
-            expect_match = match_object[1].group(0)
-            self.log('Match: {}'.format(expect_match))
-            if expect_match == b"Username:":
-                raise Exception('Invalid credentials')
-            else:
-                for tn_command in commands:
-                    self.log(tn_command)
-                    tn.write(tn_command.encode('ascii') + b"\n")
-                tn.write(b"exit\n")
-                self.log('Telnet finished')
-                telnet_output = tn.read_all().decode('ascii')
+            with telnetlib.Telnet(self.ipv4, timeout=TELNET_TIMEOUT) as tn:
+                tn.read_until(b"Username:", timeout=TELNET_TIMEOUT)
+                tn.write(USER.encode('ascii') + b"\n")
+                tn.read_until(b"Password:", timeout=TELNET_TIMEOUT)
+                tn.write(PASSWORD.encode('ascii') + b"\n")
+                # '->' for successful login or 'Username' for wrong credentials
+                match_object = tn.expect([b"->", b"Username:"], timeout=TELNET_TIMEOUT)
+                if match_object[1] == None:
+                    raise Exception('Prompt not found')
+                expect_match = match_object[1].group(0)
+                self.log('Match: {}'.format(expect_match))
+                if expect_match == b"Username:":
+                    raise Exception('Invalid credentials')
+                else:
+                    for tn_command in commands:
+                        self.log(tn_command)
+                        tn.write(tn_command.encode('ascii') + b"\n")
+                    tn.write(b"exit\n")
+                    self.log('Telnet finished')
+                    telnet_output = tn.read_all().decode('ascii')
         except Exception as ex:
             self.status = self.DANGER
             self.status_info = 'Telnet: {0}'.format(ex)
