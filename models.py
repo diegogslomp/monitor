@@ -52,18 +52,16 @@ class Host(models.Model):
 
     @property
     def isalive(self):
-        return not subprocess.call('ping -c 3 -w 1 -W 5 {} | grep ttl= > /dev/null 2>&1'
-                                   .format(self.ipv4), shell=True)
+        return not subprocess.call(f'ping -c 3 -w 1 -W 5 {self.ipv4} | grep ttl= > /dev/null 2>&1', shell=True)
 
     def send_status_message(self):
         token = os.getenv('TELEGRAM_TOKEN')
         chat_id = os.getenv('TELEGRAM_CHAT_ID')
         url='https://api.telegram.org/bot{}/sendMessage'.format(token)
         icon = '\u2705' if self.status < self.WARNING else '\u274C'
-        message = '{} {} - {}'.format(icon, self.name, self.status_info)
+        message = f'{icon} {self.name} - {self.status_info}'
         self.log(message, 'info')
-        return subprocess.call('curl -s -X POST {} -d chat_id={} -d text="{}" >/dev/null 2>&1'
-                               .format(url, chat_id, message), shell=True)
+        return subprocess.call(f'curl -s -X POST {url} -d chat_id={chat_id} -d text="{message}" >/dev/null 2>&1', shell=True)
 
     def log(self, message, level='debug'):
         if level == 'info':
@@ -82,7 +80,7 @@ class Host(models.Model):
                 for port in self.monitored_ports:
                     portlist.append(port.number)
                 portstring = ';'.join(portlist)
-                return ['show port status {}'.format(portstring)]
+                return [f'show port status {portstring}']
                 
             telnet_output = self.telnet(telnet_port_status())
             if telnet_output == '':
@@ -242,13 +240,11 @@ class Host(models.Model):
         if self.status == self.DANGER and self.retries < self.max_retries:
             self.retries += 1
             update_fields.extend(['retries'])
-            self.log('{}/{} retry before change status'
-                     .format(self.retries, self.max_retries), 'warning')
+            self.log(f'{self.retries}/{self.max_retries} retry before change status', 'warning')
         #  if status info changed, update status and logs
         elif old_status_info != self.status_info:
             self.retries = 0
-            self.log('Status info changed from "{}" to "{}"'
-                     .format(old_status_info, self.status_info))
+            self.log(f'Status info changed from "{old_status_info}" to "{self.status_info}"')
             self.last_status_change = now
             update_fields.extend(
                 ['last_status_change', 'status', 'status_info', 'retries'])
