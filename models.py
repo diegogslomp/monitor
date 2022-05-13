@@ -189,7 +189,7 @@ class Host(models.Model):
             # '->' for successful login or 'Username' for wrong credentials
             match_object = tn.expect([b"->", b"Username:"], timeout=TELNET_TIMEOUT)
             if match_object[1] == None:
-                raise Exception('Expected prompt not found')
+                raise Exception('Prompt not found')
             expect_match = match_object[1].group(0)
             self.log('Match: {}'.format(expect_match))
             if expect_match == b"Username:":
