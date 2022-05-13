@@ -85,7 +85,10 @@ class Host(models.Model):
                 return ['show port status {}'.format(portstring)]
                 
             telnet_output = self.telnet(telnet_port_status())
-            if telnet_output != '':
+            if telnet_output == '':
+                self.status = self.DANGER
+                self.status_info = 'Telnet: Can\'t get port status'
+            else:
                 for line in telnet_output.lower().replace('\r', '').split('\n'):
                     if re.search(r'[no ,in]valid', line):
                         self.status = self.DANGER
@@ -188,8 +191,6 @@ class Host(models.Model):
                 tn.write(PASSWORD.encode('ascii') + b"\n")
                 # '->' for successful login or 'Username' for wrong credentials
                 match_object = tn.expect([b"->", b"Username:"], timeout=TELNET_TIMEOUT)
-                if match_object[1] == None:
-                    raise Exception('Prompt not found')
                 expect_match = match_object[1].group(0)
                 self.log('Match: {}'.format(expect_match))
                 if expect_match == b"Username:":
@@ -202,9 +203,7 @@ class Host(models.Model):
                     self.log('Telnet finished')
                     telnet_output = tn.read_all().decode('ascii')
         except Exception as ex:
-            self.status = self.DANGER
-            self.status_info = 'Telnet: {0}'.format(ex)
-            self.log(self.status_info, 'warning')
+            self.log(f'Telnet: {ex}', 'warning')
         finally:
             return telnet_output
 
