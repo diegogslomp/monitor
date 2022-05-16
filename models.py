@@ -50,16 +50,19 @@ class Host(models.Model):
 
     @property
     def isalive(self):
-        return not subprocess.call(f'ping -c 3 -w 1 -W 5 {self.ipv4} | grep ttl= > /dev/null 2>&1', shell=True)
+        return not subprocess.call(f'ping -c 3 -w 1 -W 5 {self.ipv4} | grep ttl= >/dev/null 2>&1', shell=True)
 
     def send_telegram_message(self):
-        token = os.getenv('TELEGRAM_TOKEN')
-        chat_id = os.getenv('TELEGRAM_CHAT_ID')
-        url=f'https://api.telegram.org/bot{token}/sendMessage'
-        icon = '\u2705' if self.status < self.WARNING else '\u274C'
-        message = f'{icon} {self.name} - {self.status_info}'
-        self.log(message, 'info')
-        return subprocess.call(f'curl -s -X POST {url} -d chat_id={chat_id} -d text="{message}" >/dev/null 2>&1', shell=True)
+        token = os.getenv('TELEGRAM_TOKEN', '')
+        chat_id = os.getenv('TELEGRAM_CHAT_ID', '')
+        if token is '' or chat_id is '':
+            self.log('To send telegram messages, TELEGRAM_TOKEN e TELEGRAM_CHAT_ID must be declared', 'warning')
+        else:
+            url=f'https://api.telegram.org/bot{token}/sendMessage'
+            icon = '\u2705' if self.status < self.WARNING else '\u274C'
+            message = f'{icon} {self.name} - {self.status_info}'
+            self.log(message, 'info')
+            subprocess.call(f'curl -s -X POST {url} -d chat_id={chat_id} -d text="{message}" >/dev/null 2>&1', shell=True)
 
     def log(self, message, level='debug'):
         log_message = f'{self.ipv4:14} {message}'
