@@ -49,7 +49,7 @@ class Host(models.Model):
         return Port.objects.filter(host=self, is_monitored=True)
 
     @property
-    def isalive(self):
+    def is_pinging(self):
         return not subprocess.call(f'ping -c 3 -w 1 -W 5 {self.ipv4} | grep ttl= >/dev/null 2>&1', shell=True)
 
     def send_telegram_message(self):
@@ -209,7 +209,7 @@ class Host(models.Model):
 
     def ping_and_update_status(self):
         '''Ping host, then telnet if there are registered ports'''
-        if self.isalive:
+        if self.is_pinging:
             self.status = self.SUCCESS
             self.status_info = 'Up'
         else:
