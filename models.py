@@ -22,7 +22,7 @@ class Host(models.Model):
     circuit = models.IntegerField(null=True, blank=True)
     retries = models.IntegerField(default=0)
     max_retries = models.IntegerField(default=0)
-    secretary = models.CharField(max_length=200, null=True, blank=True)
+    local = models.CharField(max_length=200, null=True, blank=True)
     DEFAULT = 0
     SUCCESS = 1
     INFO = 2

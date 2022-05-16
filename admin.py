@@ -16,14 +16,14 @@ class PortInLines (admin.TabularInline):
 
 class HostAdmin(AbstractModelAdmin):
     fieldsets = [
-        (None, {'fields': ['secretary',
+        (None, {'fields': ['local',
                            'circuit', 'name', 'ipv4', 'network', 'max_retries']}),
         ('Daemon Fields', {'fields': [
          'status', 'status_info', 'last_status_change', 'last_check', 'retries'], 'classes': ['collapse']}),
     ]
-    list_display = ('ipv4', 'name', 'secretary', 'circuit', 
+    list_display = ('ipv4', 'name', 'local', 'circuit', 
                     'network', 'status', 'max_retries')
-    search_fields = ['ipv4', 'name', 'secretary',
+    search_fields = ['ipv4', 'name', 'local',
                      'circuit', 'network', 'status']
     inlines = [PortInLines]
 
