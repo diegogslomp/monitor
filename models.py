@@ -231,7 +231,8 @@ class Host(models.Model):
         # Store old data before change it
         old_status_info = self.status_info
         self.check_ping()
-        self.check_monitored_ports_status()
+        if self.status == self.SUCCESS:
+            self.check_monitored_ports_status()
         # Update log only if retries reach max_retires
         if self.status == self.DANGER and self.retries < self.max_retries:
             self.retries += 1
