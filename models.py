@@ -238,21 +238,25 @@ class Host(models.Model):
             self.retries += 1
             update_fields.extend(['retries'])
             self.log(f'{self.retries}/{self.max_retries} retry before change status', 'warning')
-        #  if status info changed, update status and logs
-        elif old_status_info != self.status_info:
-            self.retries = 0
-            self.log(f'Status info changed from "{old_status_info}" to "{self.status_info}"')
-            self.last_status_change = now
-            update_fields.extend(
-                ['last_status_change', 'status', 'status_info', 'retries'])
-            self.update_log()
-        # check if change the status from danger to warning status
-        elif self.status == self.DANGER:
-            delta_limit_to_warning_status = now - \
-                datetime.timedelta(days=DAYS_FROM_DANGER_TO_WARNING)
-            if self.last_status_change <= delta_limit_to_warning_status:
-                self.status = self.WARNING
-                update_fields.extend(['status'])
+        else:
+            # if online, reset retries
+            if self.status == self.SUCCESS:
+                self.retries = 0
+                update_fields.extend(['retries'])
+            # if status info changed, update status and logs                
+            if old_status_info != self.status_info:
+                self.log(f'Status info changed from "{old_status_info}" to "{self.status_info}"')
+                self.last_status_change = now
+                update_fields.extend(
+                    ['last_status_change', 'status', 'status_info'])
+                self.update_log()
+            # check if change the status from danger to warning status
+            elif self.status == self.DANGER:
+                delta_limit_to_warning_status = now - \
+                    datetime.timedelta(days=DAYS_FROM_DANGER_TO_WARNING)
+                if self.last_status_change <= delta_limit_to_warning_status:
+                    self.status = self.WARNING
+                    update_fields.extend(['status'])
         # Save only if the host was not deleted while in buffer
         try:
             self.save(update_fields=update_fields)
