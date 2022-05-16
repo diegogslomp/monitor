@@ -52,7 +52,7 @@ class Host(models.Model):
     def isalive(self):
         return not subprocess.call(f'ping -c 3 -w 1 -W 5 {self.ipv4} | grep ttl= > /dev/null 2>&1', shell=True)
 
-    def send_status_message(self):
+    def send_telegram_message(self):
         token = os.getenv('TELEGRAM_TOKEN')
         chat_id = os.getenv('TELEGRAM_CHAT_ID')
         url=f'https://api.telegram.org/bot{token}/sendMessage'
@@ -222,7 +222,7 @@ class Host(models.Model):
                                    status_info=self.status_info, status_change=self.last_status_change)
             HostLog.objects.filter(pk__in=HostLog.objects.filter(host=self).order_by('-status_change')
                                    .values_list('pk')[max_log_lines:]).delete()
-            self.send_status_message()
+            self.send_telegram_message()
         except Exception as ex:
             self.log(ex, 'warning')
 
@@ -245,6 +245,7 @@ class Host(models.Model):
             # if online, reset retries
             if self.status == self.SUCCESS:
                 self.retries = 0
+                self.log(f'Retries reseted to {self.retries}')
                 update_fields.extend(['retries'])
             # if status info changed, update status and logs
             if old_status_info != self.status_info:
