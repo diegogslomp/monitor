@@ -80,11 +80,8 @@ class Host(models.Model):
         if self.status == self.SUCCESS and self.monitored_ports.count() > 0:
 
             def telnet_port_status():
-                portlist = []
-                for port in self.monitored_ports:
-                    portlist.append(port.number)
-                portstring = ';'.join(portlist)
-                return [f'show port status {portstring}']
+                ports = ';'.join([port.number for port in self.monitored_ports])
+                return [f'show port status {ports}']
 
             telnet_output = self.telnet(telnet_port_status())
             if telnet_output == '':
@@ -100,7 +97,8 @@ class Host(models.Model):
                     for port in self.monitored_ports:
                         if re.search(r'{} .*down'.format(port.number), line):
                             self.status = self.DANGER
-                            msg = f'Port {port.number} ({line.split()[1]}) is Down'
+                            alias = line.split()[1]
+                            msg = f'Port {port.number} ({alias}) is Down'
                             if self.status_info == 'Connected':
                                 self.status_info = msg
                             else:
