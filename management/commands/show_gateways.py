@@ -1,9 +1,6 @@
 from django.core.management.base import BaseCommand
 from monitor.models import Host
-from monitor.settings import WAIT_FOR_NEXT
-import time
 import logging
-import re
 import sys
 
 
@@ -13,10 +10,10 @@ class Command(BaseCommand):
     help = 'Show gateways from all hosts'
 
     def main(self):
-    
+
         for host in Host.objects.all():
-            if not re.search(r'^RADIO', host.name) and host.isalive:
-                gateway = str(host.check_gateway())
+            if host.status == host.SUCCESS:
+                gateway = str(host.telnet_gateway())
                 sys.stdout.write('{:15} - {:15} - {}\n'.format(host.ipv4, gateway, host.name))
 
     def handle(self, *args, **options):

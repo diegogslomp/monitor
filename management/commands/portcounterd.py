@@ -12,7 +12,7 @@ class Command(BaseCommand):
     def loop(self):
         while True:
             for host in Host.objects.all():
-                host.check_port_counters()
+                host.telnet_port_counters()
                 time.sleep(1)
 
     def handle(self, *args, **options):

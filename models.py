@@ -1,7 +1,5 @@
 from django.db import models
 from django.utils import timezone
-from .settings import USER, PASSWORD, TELNET_TIMEOUT
-from .settings import DAYS_FROM_DANGER_TO_WARNING, MAX_LOG_LINES
 import datetime
 import logging
 import re
@@ -72,38 +70,41 @@ class Host(models.Model):
         else:
             self.logger.debug(log_message)
 
-    def check_monitored_ports_status(self):
+    def telnet_monitored_ports_and_update_status(self):
         '''Filter telnet manually added monitored ports'''
-        
-        def telnet_port_status():
-            portlist = []
-            for port in self.monitored_ports:
-                portlist.append(port.number)
-            portstring = ';'.join(portlist)
-            return [f'show port status {portstring}']
-            
-        telnet_output = self.telnet(telnet_port_status())
-        if telnet_output == '':
-            self.status = self.DANGER
-            self.status_info = 'Telnet: Can\'t get port status'
-        else:
-            for line in telnet_output.lower().replace('\r', '').split('\n'):
-                if re.search(r'[no ,in]valid', line):
-                    self.status = self.DANGER
-                    self.status_info = 'Invalid port registered or module is Down'
-                    self.log(self.status_info, 'warning')
-                    continue
-                for port in self.monitored_ports:
-                    if re.search(r'{} .*down'.format(port.number), line):
-                        self.status = self.DANGER
-                        msg = f'Port {port.number} ({line.split()[1]}) is Down'
-                        if self.status_info == 'Connected':
-                            self.status_info = msg
-                        else:
-                            self.status_info += f', {msg}'
-                        self.log(self.status_info)
 
-    def check_port_counters(self):
+        # Only check ports if online and has ports to be monitored
+        if self.status == self.SUCCESS and self.monitored_ports.count() > 0:
+
+            def telnet_port_status():
+                portlist = []
+                for port in self.monitored_ports:
+                    portlist.append(port.number)
+                portstring = ';'.join(portlist)
+                return [f'show port status {portstring}']
+
+            telnet_output = self.telnet(telnet_port_status())
+            if telnet_output == '':
+                self.status = self.DANGER
+                self.status_info = 'Telnet: Can\'t get port status'
+            else:
+                for line in telnet_output.lower().replace('\r', '').split('\n'):
+                    if re.search(r'[no ,in]valid', line):
+                        self.status = self.DANGER
+                        self.status_info = 'Invalid port registered or module is Down'
+                        self.log(self.status_info, 'warning')
+                        continue
+                    for port in self.monitored_ports:
+                        if re.search(r'{} .*down'.format(port.number), line):
+                            self.status = self.DANGER
+                            msg = f'Port {port.number} ({line.split()[1]}) is Down'
+                            if self.status_info == 'Connected':
+                                self.status_info = msg
+                            else:
+                                self.status_info += f', {msg}'
+                            self.log(self.status_info)
+
+    def telnet_port_counters(self):
         '''Filter telnet port counters, create ports and change status'''
         if self.status == self.SUCCESS:
             now = timezone.now()
@@ -157,9 +158,9 @@ class Host(models.Model):
                                 self.log(ex, 'warning')
                         port_object = None
 
-    def check_gateway(self):
+    def telnet_gateway(self):
         '''Filter gateway from telnet output'''
-        if self.isalive:
+        if self.status == self.SUCCESS:
             telnet_output = self.telnet(['show ip route'])
             if telnet_output != '':
                 for line in telnet_output.lower().replace('\r', '').split('\n'):
@@ -168,22 +169,25 @@ class Host(models.Model):
                         if re.search('^\s*s', line):
                             gateway = line.split()[4]
                         else:
-                            gateway = line.split()[1]                            
-                        self.log(f'Filtered gateway: {gateway}')    
+                            gateway = line.split()[1]
+                        self.log(f'Filtered gateway: {gateway}')
                         return gateway
 
     def telnet(self, commands):
         '''Telnet connection and get registered ports status'''
         self.log('Telnet started')
-        telnet_output = ''          
+        telnet_output = ''
+        timeout = os.getenv('TELNET_TIMEOUT', 5)
+        user = os.getenv('TELNET_USER', 'admin')
+        password = os.getenv('TELNET_PASSWORD', '')
         try:
-            with telnetlib.Telnet(self.ipv4, timeout=TELNET_TIMEOUT) as tn:
-                tn.read_until(b"Username:", timeout=TELNET_TIMEOUT)
-                tn.write(USER.encode('ascii') + b"\n")
-                tn.read_until(b"Password:", timeout=TELNET_TIMEOUT)
-                tn.write(PASSWORD.encode('ascii') + b"\n")
+            with telnetlib.Telnet(self.ipv4, timeout=timeout) as tn:
+                tn.read_until(b"Username:", timeout=timeout)
+                tn.write(user.encode('ascii') + b"\n")
+                tn.read_until(b"Password:", timeout=timeout)
+                tn.write(password.encode('ascii') + b"\n")
                 # '->' for successful login or 'Username' for wrong credentials
-                match_object = tn.expect([b"->", b"Username:"], timeout=TELNET_TIMEOUT)
+                match_object = tn.expect([b"->", b"Username:"], timeout=timeout)
                 expect_match = match_object[1].group(0)
                 self.log(f'Match: {expect_match}')
                 if expect_match == b"Username:":
@@ -200,7 +204,7 @@ class Host(models.Model):
         finally:
             return telnet_output
 
-    def check_ping(self):
+    def ping_and_update_status(self):
         '''Ping host, then telnet if there are registered ports'''
         if self.isalive:
             self.status = self.SUCCESS
@@ -213,10 +217,11 @@ class Host(models.Model):
     def update_log(self):
         '''Add new host log and remove old logs based on MAX_LOG_LINES'''
         try:
+            max_log_lines = os.getenv('MAX_LOG_LINES', 20)
             HostLog.objects.create(host=self, status=self.status,
                                    status_info=self.status_info, status_change=self.last_status_change)
             HostLog.objects.filter(pk__in=HostLog.objects.filter(host=self).order_by('-status_change')
-                                   .values_list('pk')[MAX_LOG_LINES:]).delete()
+                                   .values_list('pk')[max_log_lines:]).delete()
             self.send_status_message()
         except Exception as ex:
             self.log(ex, 'warning')
@@ -229,10 +234,8 @@ class Host(models.Model):
         update_fields = ['last_check']
         # Store old data before change it
         old_status_info = self.status_info
-        self.check_ping()
-        # Only check ports if online and has ports to be monitored
-        if self.status == self.SUCCESS and self.monitored_ports.count() > 0:
-            self.check_monitored_ports_status()
+        self.ping_and_update_status()
+        self.telnet_monitored_ports_and_update_status()
         # Update log only if retries reach max_retires
         if self.status == self.DANGER and self.retries < self.max_retries:
             self.retries += 1
@@ -243,7 +246,7 @@ class Host(models.Model):
             if self.status == self.SUCCESS:
                 self.retries = 0
                 update_fields.extend(['retries'])
-            # if status info changed, update status and logs                
+            # if status info changed, update status and logs
             if old_status_info != self.status_info:
                 self.log(f'Status info changed from "{old_status_info}" to "{self.status_info}"')
                 self.last_status_change = now
@@ -252,8 +255,9 @@ class Host(models.Model):
                 self.update_log()
             # check if change the status from danger to warning status
             elif self.status == self.DANGER:
+                days_to_warning = os.getenv('DAYS_FROM_DANGER_TO_WARNING', 5)
                 delta_limit_to_warning_status = now - \
-                    datetime.timedelta(days=DAYS_FROM_DANGER_TO_WARNING)
+                    datetime.timedelta(days=days_to_warning)
                 if self.last_status_change <= delta_limit_to_warning_status:
                     self.status = self.WARNING
                     update_fields.extend(['status'])
@@ -290,11 +294,12 @@ class Port(models.Model):
     def update_log(self):
         '''Add new port log and remove old logs based on MAX_LOG_LINES'''
         try:
+            max_log_lines = os.getenv('MAX_LOG_LINES', 20)
             PortLog.objects.create(port=self, host=self.host, counter_status=self.counter_status,
                                    counter_last_change=self.counter_last_change,
                                    error_counter=self.error_counter)
             PortLog.objects.filter(pk__in=PortLog.objects.filter(port=self).order_by('-counter_last_change')
-                                   .values_list('pk')[MAX_LOG_LINES:]).delete()
+                                   .values_list('pk')[max_log_lines:]).delete()
         except Exception as ex:
             Host.log(ex, 'warning')
 
