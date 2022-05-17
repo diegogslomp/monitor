@@ -3,8 +3,7 @@ import logging
 from django.utils import timezone
 from django.urls import reverse
 from django.test import TestCase
-
-from .settings import DAYS_FROM_DANGER_TO_WARNING
+import os
 from .models import Host
 
 logging.disable(logging.CRITICAL)
@@ -36,16 +35,17 @@ class HostModelTest(TestCase):
         Change host status after DAYS_FROM_DANGER_TO_WARNING
         """
         now = timezone.now()
+        days_to_warning = os.getenv('DAYS_FROM_DANGER_TO_WARNING', 5)
         offline_host = Host(
             name='offline',
-            ipv4='7.7.7.7', 
+            ipv4='7.7.7.7',
             status=Host.DANGER,
-            last_status_change = now - datetime.timedelta(days=DAYS_FROM_DANGER_TO_WARNING),
+            last_status_change = now - datetime.timedelta(days=days_to_warning),
             status_info = 'Connection Lost',
             )
         offline_host.check_and_update()
         self.assertEqual(Host.WARNING, offline_host.status)
-        
+
 
 class HostListViewTests(TestCase):
     def test_empty_list(self):

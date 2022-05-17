@@ -1,3 +1,4 @@
+from xmlrpc.client import Boolean
 from django.db import models
 from django.utils import timezone
 import datetime
@@ -55,7 +56,7 @@ class Host(models.Model):
     def send_telegram_message(self):
         token = os.getenv('TELEGRAM_TOKEN', '')
         chat_id = os.getenv('TELEGRAM_CHAT_ID', '')
-        if token is '' or chat_id is '':
+        if token == '' or chat_id == '':
             self.log('To send telegram messages, TELEGRAM_TOKEN e TELEGRAM_CHAT_ID must be declared', 'warning')
         else:
             url=f'https://api.telegram.org/bot{token}/sendMessage'
@@ -79,16 +80,14 @@ class Host(models.Model):
         # Only check ports if online and has ports to be monitored
         if self.status == self.SUCCESS and self.monitored_ports.count() > 0:
 
-            def telnet_port_status():
-                ports = ';'.join([port.number for port in self.monitored_ports])
-                return [f'show port status {ports}']
-
-            telnet_output = self.telnet(telnet_port_status())
-            if telnet_output == '':
+            ports = ';'.join([port.number for port in self.monitored_ports])
+            show_port_status = f'show port status {ports}'
+            telnet_output = self.telnet(show_port_status)
+            if not telnet_output:
                 self.status = self.DANGER
                 self.status_info = 'Telnet: Can\'t get port status'
             else:
-                for line in telnet_output.lower().replace('\r', '').split('\n'):
+                for line in telnet_output:
                     if re.search(r'[no ,in]valid', line):
                         self.status = self.DANGER
                         self.status_info = 'Invalid port registered or module is Down'
@@ -109,10 +108,10 @@ class Host(models.Model):
         '''Filter telnet port counters, create ports and change status'''
         if self.status == self.SUCCESS:
             now = timezone.now()
-            telnet_output = self.telnet(['show port counters'])
-            if telnet_output != '':
+            telnet_output = self.telnet('show port counters')
+            if telnet_output:
                 port_object = None
-                for line in telnet_output.lower().replace('\r', '').split('\n'):
+                for line in telnet_output:
                     # Create port if not exists
                     if re.search(r'^port:', line):
                         port_number = line.split()[1]
@@ -162,9 +161,9 @@ class Host(models.Model):
     def telnet_gateway(self):
         '''Filter gateway from telnet output'''
         if self.status == self.SUCCESS:
-            telnet_output = self.telnet(['show ip route'])
-            if telnet_output != '':
-                for line in telnet_output.lower().replace('\r', '').split('\n'):
+            telnet_output = self.telnet('show ip route')
+            if telnet_output:
+                for line in telnet_output:
                     if re.search(r'0.0.0.0', line):
                         self.log(f'Gateway telnet line: {line}')
                         if re.search('^\s*s', line):
@@ -174,10 +173,10 @@ class Host(models.Model):
                         self.log(f'Filtered gateway: {gateway}')
                         return gateway
 
-    def telnet(self, commands):
+    def telnet(self, command):
         '''Telnet connection and get registered ports status'''
         self.log('Telnet started')
-        telnet_output = ''
+        telnet_output = []
         timeout = os.getenv('TELNET_TIMEOUT', 5)
         user = os.getenv('TELNET_USER', 'admin')
         password = os.getenv('TELNET_PASSWORD', '')
@@ -192,14 +191,13 @@ class Host(models.Model):
                 expect_match = match_object[1].group(0)
                 self.log(f'Match: {expect_match}')
                 if expect_match == b"Username:":
-                    raise Exception('Invalid credentials')
+                    raise Exception('invalid credentials')
                 else:
-                    for tn_command in commands:
-                        self.log(tn_command)
-                        tn.write(tn_command.encode('ascii') + b"\n")
+                    self.log(command)
+                    tn.write(command.encode('ascii') + b"\n")
                     tn.write(b"exit\n")
                     self.log('Telnet finished')
-                    telnet_output = tn.read_all().decode('ascii')
+                    telnet_output = tn.read_all().decode('ascii').lower().replace('\r', '').split('\n')
         except Exception as ex:
             self.log(f'Telnet: {ex}', 'warning')
         finally:
@@ -234,6 +232,7 @@ class Host(models.Model):
         # Only update changed fields in DB
         update_fields = ['last_check']
         # Store old data before change it
+        old_status = self.status
         old_status_info = self.status_info
         self.ping_and_update_status()
         self.telnet_monitored_ports_and_update_status()
@@ -244,7 +243,7 @@ class Host(models.Model):
             self.log(f'{self.retries}/{self.max_retries} retry before change status', 'warning')
         else:
             # if online, reset retries
-            if self.status == self.SUCCESS:
+            if self.status == self.SUCCESS and old_status != self.SUCCESS:
                 self.retries = 0
                 self.log(f'Retries reseted to {self.retries}')
                 update_fields.extend(['retries'])
