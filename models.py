@@ -98,7 +98,7 @@ class Host(models.Model):
                             self.status = self.DANGER
                             alias = line.split()[1]
                             msg = f'Port {port.number} ({alias}) is Down'
-                            if self.status_info == 'Connected':
+                            if self.status_info == 'Up':
                                 self.status_info = msg
                             else:
                                 self.status_info += f', {msg}'
