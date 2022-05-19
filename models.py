@@ -245,7 +245,7 @@ class Host(models.Model):
             # if online, reset retries
             if self.status == self.SUCCESS and old_status != self.SUCCESS:
                 self.retries = 0
-                self.log(f'Retries reseted to {self.retries}')
+                self.log(f'Retries reseted to {self.retries}', 'info')
                 update_fields.extend(['retries'])
             # if status info changed, update status and logs
             if old_status_info != self.status_info:
