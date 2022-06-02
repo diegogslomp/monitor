@@ -240,7 +240,7 @@ class Host(models.Model):
         if self.status == self.DANGER and self.retries < self.max_retries:
             self.retries += 1
             update_fields.extend(['retries'])
-            self.log(f'{self.retries}/{self.max_retries} retry before change status', 'warning')
+            self.log(f'{self.retries}/{self.max_retries} retry', 'warning')
         else:
             # if online, reset retries
             if self.status == self.SUCCESS:
