@@ -51,7 +51,7 @@ class Host(models.Model):
 
     @property
     def is_pinging(self):
-        return not subprocess.call(f'ping -c 3 -w 1 -W 5 {self.ipv4} | grep ttl= >/dev/null 2>&1', shell=True)
+        return not subprocess.call(f'ping -4 -c 3 -w 1 -W 5 {self.ipv4} | grep ttl= >/dev/null 2>&1', shell=True)
 
     def send_telegram_message(self):
         token = os.getenv('TELEGRAM_TOKEN', '')
