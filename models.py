@@ -291,6 +291,15 @@ class Port(models.Model):
         'last status change', default=timezone.now)
     error_counter = models.IntegerField(default=0)
 
+    def log(self, message, level='debug'):
+        log_message = f'{self.host:14} {message}'
+        if level == 'info':
+            self.logger.info(log_message)
+        elif level == 'warning':
+            self.logger.warning(log_message)
+        else:
+            self.logger.debug(log_message)
+
     def update_log(self):
         '''Add new port log and remove old logs based on MAX_LOG_LINES'''
         try:
@@ -301,7 +310,7 @@ class Port(models.Model):
             PortLog.objects.filter(pk__in=PortLog.objects.filter(port=self).order_by('-counter_last_change')
                                    .values_list('pk')[max_log_lines:]).delete()
         except Exception as ex:
-            Host.log(ex, 'warning')
+            self.log(ex, 'warning')
 
     def __str__(self):
         return self.number
