@@ -293,7 +293,7 @@ class Port(models.Model):
     logger = logging.getLogger(__name__)
 
     def log(self, message, level='debug'):
-        log_message = f'{self.host.name:14} {message}'
+        log_message = f'{self.host.ipv4:14} {message}'
         if level == 'info':
             self.logger.info(log_message)
         elif level == 'warning':
