@@ -290,6 +290,7 @@ class Port(models.Model):
     counter_last_change = models.DateTimeField(
         'last status change', default=timezone.now)
     error_counter = models.IntegerField(default=0)
+    logger = logging.getLogger(__name__)
 
     def log(self, message, level='debug'):
         log_message = f'{self.host:14} {message}'
