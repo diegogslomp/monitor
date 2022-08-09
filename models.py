@@ -130,7 +130,7 @@ class Host(models.Model):
                         self.log(f'Old Counter: {port_object.error_counter}')
                         # Only save updated fields
                         update_fields = []
-                        # If conter updated, change var and status
+                        # If counter updated, change var and status
                         if error_counter != port_object.error_counter:
                             port_object.error_counter = error_counter
                             port_object.counter_last_change = now
@@ -289,11 +289,11 @@ class Port(models.Model):
         choices=Host.STATUS_CHOICES, default=Host.DEFAULT)
     counter_last_change = models.DateTimeField(
         'last status change', default=timezone.now)
-    error_counter = models.IntegerField(default=0)
+    error_counter = models.BigIntegerField(default=0)
     logger = logging.getLogger(__name__)
 
     def log(self, message, level='debug'):
-        log_message = f'{self.host.ipv4:14} {message}'
+        log_message = f'{self.host.ipv4:14} {self.number:7} {message}'
         if level == 'info':
             self.logger.info(log_message)
         elif level == 'warning':
