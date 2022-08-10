@@ -63,7 +63,7 @@ class Host(models.Model):
             icon = '\u2705' if self.status < self.WARNING else '\u274C'
             message = f'{icon} {self.name} - {self.status_info}'
             self.log(message, 'info')
-            subprocess.call(f'curl -s -X POST {url} -d chat_id={chat_id} -d text="{message}" >/dev/null 2>&1', shell=True)
+            subprocess.call(f'curl -s -X POST {url} -d chat_id={chat_id} -d text="{message}" >/dev/null', shell=True)
 
     def log(self, message, level='debug'):
         log_message = f'{self.ipv4:14} {message}'
