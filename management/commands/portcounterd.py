@@ -13,6 +13,7 @@ class Command(BaseCommand):
         while True:
             for host in Host.objects.all():
                 host.telnet_port_counters()
+                time.sleep(1)
                 host.telnet_switch_manager()
                 time.sleep(1)
 
