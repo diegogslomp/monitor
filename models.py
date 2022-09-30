@@ -22,6 +22,7 @@ class Host(models.Model):
     retries = models.IntegerField(default=0)
     max_retries = models.IntegerField(default=0)
     local = models.CharField(max_length=200, null=True, blank=True)
+    switch_manager = models.IntegerField(null=True, blank=True, default=0)
     DEFAULT = 0
     SUCCESS = 1
     INFO = 2
@@ -172,6 +173,18 @@ class Host(models.Model):
                             gateway = line.split()[1]
                         self.log(f'Filtered gateway: {gateway}')
                         return gateway
+
+    def telnet_switch_manager(self):
+        '''Get switch manager number'''
+        if self.status == self.SUCCESS:
+            telnet_output = self.telnet('show switch')
+            if telnet_output:
+                for line in telnet_output:
+                    if re.search(r'[M,m]gmt', line):
+                        self.switch_manager = int(line.split()[0])
+                        self.log(f'Switch manager line: {line}')
+                        self.save(update_fields=['switch_manager'])
+                        return
 
     def telnet(self, command):
         '''Telnet connection and get registered ports status'''
