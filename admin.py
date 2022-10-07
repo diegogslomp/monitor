@@ -25,6 +25,7 @@ class HostAdmin(AbstractModelAdmin):
                     'switch_manager', 'max_retries', 'circuit')
     search_fields = ['ipv4', 'name', 'local',
                      'circuit', 'network', 'status']
+    ordering = ('-switch_manager',)
     inlines = [PortInLines]
 
 
