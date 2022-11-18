@@ -20,7 +20,7 @@ class Host(models.Model):
         protocol='IPv4', null=True, blank=True)
     circuit = models.IntegerField(null=True, blank=True)
     retries = models.IntegerField(default=0)
-    max_retries = models.IntegerField(default=0)
+    max_retries = models.IntegerField(default=1)
     local = models.CharField(max_length=200, null=True, blank=True)
     switch_manager = models.IntegerField(null=True, blank=True, default=0)
     DEFAULT = 0
