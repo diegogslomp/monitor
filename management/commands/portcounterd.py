@@ -1,5 +1,5 @@
 from django.core.management.base import BaseCommand
-from monitor.models import Host
+from monitor.models import Host, Telnet
 import time
 import logging
 
@@ -12,9 +12,9 @@ class Command(BaseCommand):
     def loop(self):
         while True:
             for host in Host.objects.all():
-                host.telnet_port_counters()
+                Telnet.telnet_port_counters(host)
                 time.sleep(1)
-                host.telnet_switch_manager()
+                Telnet.telnet_switch_manager(host)
                 time.sleep(1)
 
     def handle(self, *args, **options):

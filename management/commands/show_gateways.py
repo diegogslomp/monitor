@@ -1,5 +1,5 @@
 from django.core.management.base import BaseCommand
-from monitor.models import Host
+from monitor.models import Host, Telnet
 import logging
 import sys
 
@@ -13,7 +13,7 @@ class Command(BaseCommand):
 
         for host in Host.objects.all():
             if host.status == host.SUCCESS:
-                gateway = str(host.telnet_gateway())
+                gateway = str(Telnet.telnet_gateway(host))
                 sys.stdout.write('{:15} - {:15} - {}\n'.format(host.ipv4, gateway, host.name))
 
     def handle(self, *args, **options):

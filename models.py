@@ -8,6 +8,25 @@ import subprocess
 import telnetlib
 import os
 
+class Messager:
+    @staticmethod
+    def send_telegram_message(host):
+        token = os.getenv("TELEGRAM_TOKEN", "")
+        chat_id = os.getenv("TELEGRAM_CHAT_ID", "")
+        if token == "" or chat_id == "":
+            host.log(
+                "To send telegram messages, TELEGRAM_TOKEN e TELEGRAM_CHAT_ID must be declared",
+                "warning",
+            )
+        else:
+            url = f"https://api.telegram.org/bot{token}/sendMessage"
+            icon = "\u2705" if host.status < host.WARNING else "\u274C"
+            message = f"{icon} {host.name} - {host.status_info}"
+            host.log(message, "info")
+            subprocess.call(
+                f'curl -s -X POST {url} -d chat_id={chat_id} -d text="{message}" >/dev/null',
+                shell=True,
+            )
 
 class Telnet:
     @staticmethod
@@ -218,24 +237,6 @@ class Host(models.Model):
             shell=True,
         )
 
-    def send_telegram_message(self):
-        token = os.getenv("TELEGRAM_TOKEN", "")
-        chat_id = os.getenv("TELEGRAM_CHAT_ID", "")
-        if token == "" or chat_id == "":
-            self.log(
-                "To send telegram messages, TELEGRAM_TOKEN e TELEGRAM_CHAT_ID must be declared",
-                "warning",
-            )
-        else:
-            url = f"https://api.telegram.org/bot{token}/sendMessage"
-            icon = "\u2705" if self.status < self.WARNING else "\u274C"
-            message = f"{icon} {self.name} - {self.status_info}"
-            self.log(message, "info")
-            subprocess.call(
-                f'curl -s -X POST {url} -d chat_id={chat_id} -d text="{message}" >/dev/null',
-                shell=True,
-            )
-
     def log(self, message, level="debug"):
         log_message = f"{self.ipv4:14} {message}"
         if level == "info":
@@ -270,7 +271,7 @@ class Host(models.Model):
                 .order_by("-status_change")
                 .values_list("pk")[max_log_lines:]
             ).delete()
-            self.send_telegram_message()
+            Messager.send_telegram_message(self)
         except Exception as ex:
             self.log(ex, "warning")
 
