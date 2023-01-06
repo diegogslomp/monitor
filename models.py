@@ -7,27 +7,31 @@ import subprocess
 import telnetlib
 import os
 
-class Messager:
-    @staticmethod
-    def send_telegram_message(host):
-        token = os.getenv("TELEGRAM_TOKEN", "")
-        chat_id = os.getenv("TELEGRAM_CHAT_ID", "")
-        if token == "" or chat_id == "":
-            host.log(
-                "To send telegram messages, TELEGRAM_TOKEN e TELEGRAM_CHAT_ID must be declared",
-                "warning",
-            )
-        else:
-            url = f"https://api.telegram.org/bot{token}/sendMessage"
-            icon = "\u2705" if host.status < host.WARNING else "\u274C"
-            message = f"{icon} {host.name} - {host.status_info}"
-            host.log(message, "info")
-            subprocess.call(
-                f'curl -s -X POST {url} -d chat_id={chat_id} -d text="{message}" >/dev/null',
-                shell=True,
-            )
+
+logger = logging.getLogger(__name__)
+
+
+def send_telegram_message(host):
+    """Send Telegram via curl API"""
+    token = os.getenv("TELEGRAM_TOKEN", "")
+    chat_id = os.getenv("TELEGRAM_CHAT_ID", "")
+    if token == "" or chat_id == "":
+        logger.warning(
+            "Telegram: To send messages, TELEGRAM_TOKEN e TELEGRAM_CHAT_ID must be declared"
+        )
+    else:
+        url = f"https://api.telegram.org/bot{token}/sendMessage"
+        icon = "\u2705" if host.status < host.WARNING else "\u274C"
+        message = f"{icon} {host.name} - {host.status_info}"
+        logger.info(f"Telegram: {message}")
+        subprocess.call(
+            f'curl -s -X POST {url} -d chat_id={chat_id} -d text="{message}" >/dev/null',
+            shell=True,
+        )
+
 
 class Telnet:
+    """Telnet methods"""
     @staticmethod
     def telnet_monitored_ports_and_update_status(host):
         """Filter telnet manually added monitored ports"""
@@ -46,7 +50,7 @@ class Telnet:
                     if re.search(r"[no ,in]valid", line):
                         host.status = host.DANGER
                         host.status_info = "Invalid port registered or module is Down"
-                        host.log(host.status_info, "warning")
+                        logger.warning(f"Telnet: {host.status_info}")
                         continue
                     for port in host.monitored_ports:
                         if re.search(r"{} .*down".format(port.number), line):
@@ -57,7 +61,7 @@ class Telnet:
                                 host.status_info = msg
                             else:
                                 host.status_info += f", {msg}"
-                            host.log(host.status_info)
+                            logger.debug(f"Telnet: {host.status_info}")
 
     @staticmethod
     def telnet_port_counters(host):
@@ -71,21 +75,21 @@ class Telnet:
                     # Create port if not exists
                     if re.search(r"^port:", line):
                         port_number = line.split()[1]
-                        host.log(f"Filtered Port: {port_number}")
+                        logger.debug(f"Telnet filtered port: {port_number}")
                         port_object = Port.objects.get_or_create(
                             host=host, number=port_number
                         )[0]
                     elif re.search(r"^port :", line):
                         port_number = line.split()[2]
-                        host.log(f"Filtered Port: {port_number}")
+                        logger.debug(f"Telnet filtered port: {port_number}")
                         port_object = Port.objects.get_or_create(
                             host=host, number=port_number
                         )[0]
                     # Update counter and status
                     elif re.search(r"^in errors", line):
                         error_counter = int(line.split()[2])
-                        host.log(f"Filtered Counter: {error_counter}")
-                        host.log(f"Old Counter: {port_object.error_counter}")
+                        logger.debug(f"Telnet filtered counter: {error_counter}")
+                        logger.debug(f"Telnet old counter: {port_object.error_counter}")
                         # Only save updated fields
                         update_fields = []
                         # If counter updated, change var and status
@@ -102,7 +106,7 @@ class Telnet:
                             )
                             # Add port log if counter changed
                             port_object.update_log()
-                            host.log(f"Counter updated to: {error_counter}")
+                            logger.debug(f"Telnet counter updated to: {error_counter}")
                         else:
                             old_counter_status = port_object.counter_status
                             delta_1_day = now - datetime.timedelta(days=1)
@@ -116,9 +120,9 @@ class Telnet:
                         if len(update_fields) > 0:
                             try:
                                 port_object.save(update_fields=update_fields)
-                                host.log("Save port log to database")
+                                logger.debug("Save port log to database")
                             except Exception as ex:
-                                host.log(ex, "warning")
+                                logger.warning(ex)
                         port_object = None
 
     @staticmethod
@@ -129,12 +133,12 @@ class Telnet:
             if telnet_output:
                 for line in telnet_output:
                     if re.search(r"0.0.0.0", line):
-                        host.log(f"Gateway telnet line: {line}")
+                        logger.debug(f"Telnet gateway line: {line}")
                         if re.search("^\s*s", line):
                             gateway = line.split()[4]
                         else:
                             gateway = line.split()[1]
-                        host.log(f"Filtered gateway: {gateway}")
+                        logger.debug(f"Telnet gateway: {gateway}")
                         return gateway
 
     @staticmethod
@@ -145,15 +149,16 @@ class Telnet:
             if telnet_output:
                 for line in telnet_output:
                     if re.search(r"[M,m]gmt", line):
+                        logger.debug(f"Telnet switch manager line: {line}")
                         host.switch_manager = int(line.split()[0])
-                        host.log(f"Switch manager line: {line}")
+                        logger.debug(f"Telnet switch manager: {host.switch_manager}")
                         host.save(update_fields=["switch_manager"])
                         return
 
     @staticmethod
     def telnet(host, command):
         """Telnet connection and get registered ports status"""
-        host.log("Telnet started")
+        logger.debug("Telnet: Connection started")
         telnet_output = []
         timeout = os.getenv("TELNET_TIMEOUT", 5)
         user = os.getenv("TELNET_USER", "admin")
@@ -167,14 +172,14 @@ class Telnet:
                 # '->' for successful login or 'Username' for wrong credentials
                 match_object = tn.expect([b"->", b"Username:"], timeout=timeout)
                 expect_match = match_object[1].group(0)
-                host.log(f"Match: {expect_match}")
+                logger.debug(f"Telnet match: {expect_match}")
                 if expect_match == b"Username:":
                     raise Exception("invalid credentials")
                 else:
-                    host.log(command)
+                    logger.debug(f"Telnet command: {command}")
                     tn.write(command.encode("ascii") + b"\n")
                     tn.write(b"exit\n")
-                    host.log("Telnet finished")
+                    logger.debug("Telnet: Connection finished")
                     telnet_output = (
                         tn.read_all()
                         .decode("ascii")
@@ -183,7 +188,7 @@ class Telnet:
                         .split("\n")
                     )
         except Exception as ex:
-            host.log(f"Telnet: {ex}", "warning")
+            logger.warning(f"Telnet: {ex}")
         finally:
             return telnet_output
 
@@ -216,7 +221,6 @@ class Host(models.Model):
         (DANGER, "negative"),
     )
     status = models.IntegerField(choices=STATUS_CHOICES, default=DEFAULT)
-    logger = logging.getLogger(__name__)
 
     def __str__(self):
         return self.name
@@ -232,18 +236,9 @@ class Host(models.Model):
     @property
     def is_pinging(self):
         return not subprocess.call(
-            f"ping -4 -c 3 -w 1 -W 5 {self.ipv4} | grep ttl= >/dev/null 2>&1",
+            f"ping -4 -c3 -w1 -W5 {self.ipv4} | grep ttl= >/dev/null 2>&1",
             shell=True,
         )
-
-    def log(self, message, level="debug"):
-        log_message = f"{self.ipv4:14} {message}"
-        if level == "info":
-            self.logger.info(log_message)
-        elif level == "warning":
-            self.logger.warning(log_message)
-        else:
-            self.logger.debug(log_message)
 
     def ping_and_update_status(self):
         """Ping host, then telnet if there are registered ports"""
@@ -253,7 +248,7 @@ class Host(models.Model):
         else:
             self.status = self.DANGER
             self.status_info = "Down"
-        self.log(self.status_info)
+        logger.debug(f"Ping {self.ipv4}: {self.status_info}")
 
     def update_log(self):
         """Add new host log and remove old logs based on MAX_LOG_LINES"""
@@ -270,9 +265,9 @@ class Host(models.Model):
                 .order_by("-status_change")
                 .values_list("pk")[max_log_lines:]
             ).delete()
-            Messager.send_telegram_message(self)
+            send_telegram_message(self)
         except Exception as ex:
-            self.log(ex, "warning")
+            logger.warning(f"HostLog: {ex}")
 
     def check_and_update(self):
         """The 'main' function of monitord, check/update host and logs"""
@@ -289,7 +284,7 @@ class Host(models.Model):
         if self.status == self.DANGER and self.retries < self.max_retries:
             self.retries += 1
             update_fields.extend(["retries"])
-            self.log(f"{self.retries}/{self.max_retries} retry", "warning")
+            logger.warning(f"{host.ipv4}: {self.retries}/{self.max_retries} retry")
         else:
             # if online, reset retries
             if self.status == self.SUCCESS:
@@ -297,8 +292,8 @@ class Host(models.Model):
                 update_fields.extend(["retries"])
             # if status info changed, update status and logs
             if old_status_info != self.status_info:
-                self.log(
-                    f'Status info changed from "{old_status_info}" to "{self.status_info}"'
+                logger.debug(
+                    f'{host.ipv4}: Status info changed from "{old_status_info}" to "{self.status_info}"'
                 )
                 self.last_status_change = now
                 update_fields.extend(["last_status_change", "status", "status_info"])
@@ -316,7 +311,7 @@ class Host(models.Model):
         try:
             self.save(update_fields=update_fields)
         except Exception as ex:
-            self.log(ex, "warning")
+            logger.warning(ex)
 
 
 class HostLog(models.Model):
@@ -344,16 +339,6 @@ class Port(models.Model):
         "last status change", default=timezone.now
     )
     error_counter = models.BigIntegerField(default=0)
-    logger = logging.getLogger(__name__)
-
-    def log(self, message, level="debug"):
-        log_message = f"{self.host.ipv4:14} {self.number:7} {message}"
-        if level == "info":
-            self.logger.info(log_message)
-        elif level == "warning":
-            self.logger.warning(log_message)
-        else:
-            self.logger.debug(log_message)
 
     def update_log(self):
         """Add new port log and remove old logs based on MAX_LOG_LINES"""
@@ -372,7 +357,7 @@ class Port(models.Model):
                 .values_list("pk")[max_log_lines:]
             ).delete()
         except Exception as ex:
-            self.log(ex, "warning")
+            logger.warning(ex)
 
     def __str__(self):
         return self.number
