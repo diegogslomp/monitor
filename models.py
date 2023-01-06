@@ -33,7 +33,7 @@ def send_telegram_message(host):
 class Telnet:
     """Telnet methods"""
     @staticmethod
-    def telnet_monitored_ports_and_update_status(host):
+    def telnet_monitored_ports(host):
         """Filter telnet manually added monitored ports"""
 
         # Only check ports if online and has ports to be monitored
@@ -233,16 +233,13 @@ class Host(models.Model):
     def monitored_ports(self):
         return Port.objects.filter(host=self, is_monitored=True)
 
-    @property
-    def is_pinging(self):
-        return not subprocess.call(
+    def ping(self):
+        """Ping host via shell and update status"""
+        is_up = not subprocess.call(
             f"ping -4 -c3 -w1 -W5 {self.ipv4} | grep ttl= >/dev/null 2>&1",
             shell=True,
         )
-
-    def ping_and_update_status(self):
-        """Ping host, then telnet if there are registered ports"""
-        if self.is_pinging:
+        if is_up:
             self.status = self.SUCCESS
             self.status_info = "Up"
         else:
@@ -278,13 +275,13 @@ class Host(models.Model):
         # Store old data before change it
         old_status = self.status
         old_status_info = self.status_info
-        self.ping_and_update_status()
-        Telnet.telnet_monitored_ports_and_update_status(self)
+        self.ping()
+        Telnet.telnet_monitored_ports(self)
         # Update log only if retries reach max_retires
         if self.status == self.DANGER and self.retries < self.max_retries:
             self.retries += 1
             update_fields.extend(["retries"])
-            logger.warning(f"{host.ipv4}: {self.retries}/{self.max_retries} retry")
+            logger.warning(f"{self.ipv4}: {self.retries}/{self.max_retries} retry")
         else:
             # if online, reset retries
             if self.status == self.SUCCESS:
@@ -293,7 +290,7 @@ class Host(models.Model):
             # if status info changed, update status and logs
             if old_status_info != self.status_info:
                 logger.debug(
-                    f'{host.ipv4}: Status info changed from "{old_status_info}" to "{self.status_info}"'
+                    f'{self.ipv4}: Status info changed from "{old_status_info}" to "{self.status_info}"'
                 )
                 self.last_status_change = now
                 update_fields.extend(["last_status_change", "status", "status_info"])
