@@ -51,7 +51,7 @@ class Telnet:
         except:
             host.status = host.DANGER
             host.status_info = "Telnet: Can't get port status"
-            logger.warning(f"Telnet: {ex}")
+            logger.warning(ex)
             return
 
         for line in telnet_output:
@@ -79,7 +79,7 @@ class Telnet:
         try:
             telnet_output = Telnet.telnet(host, "show port counters")
         except Exception as ex:
-            logger.warning(f"Telnet: {ex}")
+            logger.warning(ex)
             return
 
         for line in telnet_output:
@@ -142,7 +142,7 @@ class Telnet:
         try:
             telnet_output = Telnet.telnet(host, "show ip route")
         except Exception as ex:
-            logger.warning(f"Telnet: {ex}")
+            logger.warning(ex)
             return
 
         for line in telnet_output:
@@ -163,7 +163,7 @@ class Telnet:
         try:
             telnet_output = Telnet.telnet(host, "show switch")
         except Exception as ex:
-            logger.warning(f"Telnet: {ex}")
+            logger.warning(ex)
             return
 
         for line in telnet_output:
