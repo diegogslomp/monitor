@@ -193,7 +193,7 @@ class Telnet:
 
             # '->' for successful login or 'Username' for wrong credentials
             matched_object = tn.expect([b"->", b"Username:"], timeout=timeout)
-            if not matched_object:
+            if not matched_object[1]:
                 raise ValueError("Telnet: Empty expect return")
 
             expected_match = matched_object[1].group(0)
