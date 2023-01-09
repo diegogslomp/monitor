@@ -280,8 +280,8 @@ class Host(models.Model):
                 .values_list("pk")[max_log_lines:]
             ).delete()
             send_telegram_message(self)
-        except Exception as ex:
-            logger.warning(f"HostLog: {ex}")
+        except Exception as e:
+            logger.warning(f"HostLog: {e}")
 
     def check_and_update(self):
         """The 'main' function of monitord, check/update host and logs"""
@@ -324,8 +324,8 @@ class Host(models.Model):
         # Save only if the host was not deleted while in buffer
         try:
             self.save(update_fields=update_fields)
-        except Exception as ex:
-            logger.warning(ex)
+        except Exception as e:
+            logger.warning(e)
 
 
 class HostLog(models.Model):
@@ -370,8 +370,8 @@ class Port(models.Model):
                 .order_by("-counter_last_change")
                 .values_list("pk")[max_log_lines:]
             ).delete()
-        except Exception as ex:
-            logger.warning(ex)
+        except Exception as e:
+            logger.warning(e)
 
     def __str__(self):
         return self.number
