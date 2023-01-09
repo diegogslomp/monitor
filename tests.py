@@ -26,6 +26,7 @@ class HostModelTest(TestCase):
             name='offline',
             ipv4='7.7.7.7',
             status=Host.SUCCESS,
+            status_info="Up"
             )
         offline_host.check_and_update()
         self.assertEqual(Host.DANGER, offline_host.status)
@@ -41,7 +42,8 @@ class HostModelTest(TestCase):
             ipv4='7.7.7.7',
             status=Host.DANGER,
             last_status_change = now - datetime.timedelta(days=days_to_warning),
-            status_info = 'Connection Lost',
+            status_info = 'Down',
+            max_retries = 0
             )
         offline_host.check_and_update()
         self.assertEqual(Host.WARNING, offline_host.status)
