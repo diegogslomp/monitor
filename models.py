@@ -39,26 +39,24 @@ class Telnet:
     @staticmethod
     def telnet_monitored_ports(host):
         """Filter telnet manually added monitored ports"""
-
         # Only check ports if online and has ports to be monitored
         if host.monitored_ports.count() <= 0:
             return
 
-        try:
-            ports = ";".join([port.number for port in host.monitored_ports])
-            show_port_status = f"show port status {ports}"
-            telnet_output = Telnet.telnet(host, show_port_status)
-        except:
+        ports = ";".join([port.number for port in host.monitored_ports])
+        show_port_status = f"show port status {ports}"
+        telnet_output = Telnet.telnet(host, show_port_status)
+        if not telnet_output:
             host.status = host.DANGER
-            host.status_info = "Telnet: Can't get port status"
-            logger.warning(ex)
+            host.status_info = "Can't get port status"
+            logger.warning(host.status_info)
             return
 
         for line in telnet_output:
             if re.search(r"[no ,in]valid", line):
                 host.status = host.DANGER
                 host.status_info = "Invalid port registered or module is Down"
-                logger.warning(f"Telnet: {host.status_info}")
+                logger.warning(host.status_info)
                 continue
             for port in host.monitored_ports:
                 if re.search(r"{} .*down".format(port.number), line):
@@ -69,17 +67,16 @@ class Telnet:
                         host.status_info = msg
                     else:
                         host.status_info += f", {msg}"
-                    logger.debug(f"Telnet: {host.status_info}")
+                    logger.debug(host.status_info)
 
     @staticmethod
     def telnet_port_counters(host):
         """Filter telnet port counters, create ports and change status"""
         now = timezone.now()
         port_object = None
-        try:
-            telnet_output = Telnet.telnet(host, "show port counters")
-        except Exception as ex:
-            logger.warning(ex)
+        telnet_output = Telnet.telnet(host, "show port counters")
+
+        if not telnet_output:
             return
 
         for line in telnet_output:
@@ -87,15 +84,15 @@ class Telnet:
             if re.search(r"^port:", line):
                 port_number = line.split()[1]
                 logger.debug(f"Telnet filtered port: {port_number}")
-                port_object = Port.objects.get_or_create(
-                    host=host, number=port_number
-                )[0]
+                port_object = Port.objects.get_or_create(host=host, number=port_number)[
+                    0
+                ]
             elif re.search(r"^port :", line):
                 port_number = line.split()[2]
                 logger.debug(f"Telnet filtered port: {port_number}")
-                port_object = Port.objects.get_or_create(
-                    host=host, number=port_number
-                )[0]
+                port_object = Port.objects.get_or_create(host=host, number=port_number)[
+                    0
+                ]
             # Update counter and status
             elif re.search(r"^in errors", line):
                 error_counter = int(line.split()[2])
@@ -132,17 +129,16 @@ class Telnet:
                     try:
                         port_object.save(update_fields=update_fields)
                         logger.debug("Save port log to database")
-                    except Exception as ex:
-                        logger.warning(ex)
+                    except Exception as e:
+                        logger.warning(e)
                 port_object = None
 
     @staticmethod
     def telnet_gateway(host):
         """Filter gateway from telnet output"""
-        try:
-            telnet_output = Telnet.telnet(host, "show ip route")
-        except Exception as ex:
-            logger.warning(ex)
+
+        telnet_output = Telnet.telnet(host, "show ip route")
+        if not telnet_output:
             return
 
         for line in telnet_output:
@@ -160,10 +156,8 @@ class Telnet:
     def telnet_switch_manager(host):
         """Get switch manager number"""
 
-        try:
-            telnet_output = Telnet.telnet(host, "show switch")
-        except Exception as ex:
-            logger.warning(ex)
+        telnet_output = Telnet.telnet(host, "show switch")
+        if not telnet_output:
             return
 
         for line in telnet_output:
@@ -177,38 +171,42 @@ class Telnet:
     @staticmethod
     def telnet(host, command) -> list[str]:
         """Telnet connection and get registered ports status"""
+        telnet_output = []
+        try:
+            assert host.status == host.SUCCESS
 
-        assert host.status == host.SUCCESS
+            timeout = os.getenv("TELNET_TIMEOUT", 5)
+            user = os.getenv("TELNET_USER", "admin")
+            password = os.getenv("TELNET_PASSWORD", "")
 
-        timeout = os.getenv("TELNET_TIMEOUT", 5)
-        user = os.getenv("TELNET_USER", "admin")
-        password = os.getenv("TELNET_PASSWORD", "")
+            with telnetlib.Telnet(host.ipv4, timeout=timeout) as tn:
+                logger.debug("Telnet: Connection started")
+                tn.read_until(b"Username:", timeout=timeout)
+                tn.write(user.encode("ascii") + b"\n")
+                tn.read_until(b"Password:", timeout=timeout)
+                tn.write(password.encode("ascii") + b"\n")
 
-        with telnetlib.Telnet(host.ipv4, timeout=timeout) as tn:
-            logger.debug("Telnet: Connection started")
-            tn.read_until(b"Username:", timeout=timeout)
-            tn.write(user.encode("ascii") + b"\n")
-            tn.read_until(b"Password:", timeout=timeout)
-            tn.write(password.encode("ascii") + b"\n")
+                # '->' for successful login or 'Username' for wrong credentials
+                matched_object = tn.expect([b"->", b"Username:"], timeout=timeout)
+                if not matched_object[1]:
+                    raise ValueError("Telnet: Empty expect return")
 
-            # '->' for successful login or 'Username' for wrong credentials
-            matched_object = tn.expect([b"->", b"Username:"], timeout=timeout)
-            if not matched_object[1]:
-                raise ValueError("Telnet: Empty expect return")
+                expected_match = matched_object[1].group(0)
+                logger.debug(f"Telnet match: {expected_match}")
+                if expected_match == b"Username:":
+                    raise PermissionError("Telnet: Invalid credentials")
 
-            expected_match = matched_object[1].group(0)
-            logger.debug(f"Telnet match: {expected_match}")
-            if expected_match == b"Username:":
-                raise PermissionError("Telnet: Invalid credentials")
+                logger.debug(f"Telnet command: {command}")
+                tn.write(command.encode("ascii") + b"\n")
+                tn.write(b"exit\n")
+                logger.debug("Telnet: Connection finished")
 
-            logger.debug(f"Telnet command: {command}")
-            tn.write(command.encode("ascii") + b"\n")
-            tn.write(b"exit\n")
-            logger.debug("Telnet: Connection finished")
-
-            telnet_output = (
-                tn.read_all().decode("ascii").lower().replace("\r", "").split("\n")
-            )
+                telnet_output = (
+                    tn.read_all().decode("ascii").lower().replace("\r", "").split("\n")
+                )
+        except Exception(e):
+            logger.warning(e)
+        finally:
             return telnet_output
 
 
@@ -264,7 +262,7 @@ class Host(models.Model):
         else:
             self.status = self.DANGER
             self.status_info = "Down"
-        logger.debug(f"Ping {self.ipv4} - {self.name}: {self.status_info}")
+        logger.debug(f"{self.ipv4} - {self.name}: {self.status_info}")
 
     def update_log(self):
         """Add new host log and remove old logs based on MAX_LOG_LINES"""
