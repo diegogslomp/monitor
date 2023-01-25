@@ -23,7 +23,7 @@ def send_telegram_message(host):
         return
 
     url = f"https://api.telegram.org/bot{token}/sendMessage"
-    icon = "\u2705" if host.status < host.WARNING else "\u274C"
+    icon = "\u2705" if host.status < Status.WARNING else "\u274C"
     message = f"{icon} {host.name} - {host.status_info}"
     logger.info(f"Telegram: {message}")
 
@@ -47,20 +47,20 @@ class Telnet:
         show_port_status = f"show port status {ports}"
         telnet_output = Telnet.telnet(host, show_port_status)
         if not telnet_output:
-            host.status = host.DANGER
+            host.status = Status.DANGER
             host.status_info = "Can't get port status"
             logger.warning(host.status_info)
             return
 
         for line in telnet_output:
             if re.search(r"[no ,in]valid", line):
-                host.status = host.DANGER
+                host.status = Status.DANGER
                 host.status_info = "Invalid port registered or module is Down"
                 logger.warning(host.status_info)
                 continue
             for port in host.monitored_ports:
                 if re.search(r"{} .*down".format(port.number), line):
-                    host.status = host.DANGER
+                    host.status = Status.DANGER
                     alias = line.split()[1]
                     msg = f"Port {port.number} ({alias}) is Down"
                     if host.status_info == "Up":
@@ -104,7 +104,7 @@ class Telnet:
                 if error_counter != port_object.error_counter:
                     port_object.error_counter = error_counter
                     port_object.counter_last_change = now
-                    port_object.counter_status = Host.DANGER
+                    port_object.counter_status = Status.DANGER
                     update_fields.extend(
                         [
                             "error_counter",
@@ -173,7 +173,7 @@ class Telnet:
         """Telnet connection and get registered ports status"""
         telnet_output = []
         try:
-            assert host.status == host.SUCCESS
+            assert host.status == Status.SUCCESS
 
             timeout = os.getenv("TELNET_TIMEOUT", 5)
             user = os.getenv("TELNET_USER", "admin")
@@ -209,6 +209,19 @@ class Telnet:
         finally:
             return telnet_output
 
+class Status(models.Model):
+    DEFAULT = 0
+    SUCCESS = 1
+    INFO = 2
+    WARNING = 3
+    DANGER = 4
+    STATUS_CHOICES = (
+        (DEFAULT, "secondary"),
+        (SUCCESS, "positive"),
+        (INFO, "primary"),
+        (WARNING, "warning"),
+        (DANGER, "negative"),
+    )
 
 class Host(models.Model):
     name = models.CharField(max_length=200)
@@ -225,19 +238,7 @@ class Host(models.Model):
     max_retries = models.IntegerField(default=1)
     local = models.CharField(max_length=200, null=True, blank=True)
     switch_manager = models.IntegerField(null=True, blank=True, default=0)
-    DEFAULT = 0
-    SUCCESS = 1
-    INFO = 2
-    WARNING = 3
-    DANGER = 4
-    STATUS_CHOICES = (
-        (DEFAULT, "secondary"),
-        (SUCCESS, "positive"),
-        (INFO, "primary"),
-        (WARNING, "warning"),
-        (DANGER, "negative"),
-    )
-    status = models.IntegerField(choices=STATUS_CHOICES, default=DEFAULT)
+    status = models.IntegerField(choices=Status.STATUS_CHOICES, default=Status.DEFAULT)
 
     def __str__(self):
         return self.name
@@ -257,10 +258,10 @@ class Host(models.Model):
             shell=True,
         )
         if is_up:
-            self.status = self.SUCCESS
+            self.status = Status.SUCCESS
             self.status_info = "Up"
         else:
-            self.status = self.DANGER
+            self.status = Status.DANGER
             self.status_info = "Down"
         logger.debug(f"{self.ipv4} - {self.name}: {self.status_info}")
 
@@ -295,13 +296,13 @@ class Host(models.Model):
         self.ping()
         Telnet.telnet_monitored_ports(self)
         # Update log only if retries reach max_retires
-        if self.status == self.DANGER and self.retries < self.max_retries:
+        if self.status == Status.DANGER and self.retries < self.max_retries:
             self.retries += 1
             update_fields.extend(["retries"])
             logger.warning(f"{self.ipv4}: {self.retries}/{self.max_retries} retry")
         else:
             # if online, reset retries
-            if self.status == self.SUCCESS:
+            if self.status == Status.SUCCESS:
                 self.retries = 0
                 update_fields.extend(["retries"])
             # if status info changed, update status and logs
@@ -313,13 +314,13 @@ class Host(models.Model):
                 update_fields.extend(["last_status_change", "status", "status_info"])
                 self.update_log()
             # check if change the status from danger to warning status
-            elif self.status == self.DANGER:
+            elif self.status == Status.DANGER:
                 days_to_warning = os.getenv("DAYS_FROM_DANGER_TO_WARNING", 5)
                 delta_limit_to_warning_status = now - datetime.timedelta(
                     days=days_to_warning
                 )
                 if self.last_status_change <= delta_limit_to_warning_status:
-                    self.status = self.WARNING
+                    self.status = Status.WARNING
                     update_fields.extend(["status"])
         # Save only if the host was not deleted while in buffer
         try:
@@ -332,7 +333,7 @@ class HostLog(models.Model):
     """Host Logs showed in host detail view"""
 
     host = models.ForeignKey(Host, on_delete=models.CASCADE)
-    status = models.IntegerField(choices=Host.STATUS_CHOICES, default=Host.DEFAULT)
+    status = models.IntegerField(choices=Status.STATUS_CHOICES, default=Status.DEFAULT)
     status_change = models.DateTimeField()
     status_info = models.CharField(max_length=200, blank=True, default="")
 
@@ -347,7 +348,7 @@ class Port(models.Model):
     number = models.CharField(max_length=20)
     is_monitored = models.BooleanField(default=False)
     counter_status = models.IntegerField(
-        choices=Host.STATUS_CHOICES, default=Host.DEFAULT
+        choices=Status.STATUS_CHOICES, default=Status.DEFAULT
     )
     counter_last_change = models.DateTimeField(
         "last status change", default=timezone.now
@@ -383,7 +384,7 @@ class PortLog(models.Model):
     port = models.ForeignKey(Port, on_delete=models.CASCADE, null=True)
     host = models.ForeignKey(Host, on_delete=models.CASCADE, null=True)
     counter_status = models.IntegerField(
-        choices=Host.STATUS_CHOICES, default=Host.DEFAULT
+        choices=Status.STATUS_CHOICES, default=Status.DEFAULT
     )
     counter_last_change = models.DateTimeField(
         "last status change", default=timezone.now
