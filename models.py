@@ -204,7 +204,7 @@ class Telnet:
                 telnet_output = (
                     tn.read_all().decode("ascii").lower().replace("\r", "").split("\n")
                 )
-        except Exception(e):
+        except Exception as e:
             logger.warning(e)
         finally:
             return telnet_output
