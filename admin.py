@@ -1,7 +1,5 @@
 from django.contrib import admin
-from .models.host import Host
-from .models.port import Port
-from .models.fiber import Fiber, Dio
+from .models import Host, Port, Fiber, Dio
 
 
 class AbstractModelAdmin(admin.ModelAdmin):

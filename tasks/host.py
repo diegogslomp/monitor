@@ -3,8 +3,7 @@ import datetime
 import logging
 import os
 from ..models import Status
-from . import sh, telnet
-from . import log
+from . import sh, telnet, log
 
 logger = logging.getLogger(__name__)
 

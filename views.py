@@ -1,8 +1,5 @@
 from django.views.generic import ListView, TemplateView
-from .models.host import Host
-from .models.port import Port
-from .models.log import PortLog
-from .models.fiber import Dio, Fiber
+from .models import Host, Port, PortLog, Dio, Fiber
 
 
 class IndexView(TemplateView):

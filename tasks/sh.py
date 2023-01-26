@@ -1,6 +1,6 @@
 import logging
 import subprocess
-from ..models.status import Status
+from ..models import Status
 import os
 
 logger = logging.getLogger(__name__)

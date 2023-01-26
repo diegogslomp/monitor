@@ -1,6 +1,5 @@
 import logging
-from ..models.port import Port
-from ..models.status import Status
+from ..models import Port, Status
 from django.utils import timezone
 import re
 import datetime
