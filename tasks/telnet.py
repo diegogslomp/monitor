@@ -1,5 +1,5 @@
 import logging
-from ..models import Port, Status
+from ..models import Port, Status, Host
 from django.utils import timezone
 import re
 import datetime
@@ -10,7 +10,7 @@ from . import log
 logger = logging.getLogger(__name__)
 
 
-def telnet_monitored_ports(host) -> None:
+def telnet_monitored_ports(host: Host) -> None:
     """Filter telnet manually added monitored ports"""
     # Only check ports if online and has ports to be monitored
     if host.monitored_ports.count() <= 0:
@@ -43,7 +43,7 @@ def telnet_monitored_ports(host) -> None:
                 logger.debug(host.status_info)
 
 
-def telnet_port_counters(host) -> None:
+def telnet_port_counters(host: Host) -> None:
     """Filter telnet port counters, create ports and change status"""
     now = timezone.now()
     port_object = None
@@ -103,7 +103,7 @@ def telnet_port_counters(host) -> None:
             port_object = None
 
 
-def telnet_gateway(host) -> str:
+def telnet_gateway(host: Host) -> str:
     """Filter gateway from telnet output"""
 
     telnet_output = telnet(host, "show ip route")
@@ -122,7 +122,7 @@ def telnet_gateway(host) -> str:
             return gateway
 
 
-def telnet_switch_manager(host) -> None:
+def telnet_switch_manager(host: Host) -> None:
     """Get switch manager number"""
 
     telnet_output = telnet(host, "show switch")
@@ -138,7 +138,7 @@ def telnet_switch_manager(host) -> None:
             return
 
 
-def telnet(host, command: str) -> list[str]:
+def telnet(host: Host, command: str) -> list[str]:
     """Telnet connection and get registered ports status"""
     telnet_output = []
     try:

@@ -2,13 +2,13 @@ from django.utils import timezone
 import datetime
 import logging
 import os
-from ..models import Status
+from ..models import Status, Host
 from . import sh, telnet, log
 
 logger = logging.getLogger(__name__)
 
 
-def check_and_update(host):
+def check_and_update(host: Host) -> None:
     """The 'main' function of monitord, check/update host and logs"""
     now = timezone.now()
     host.last_check = now

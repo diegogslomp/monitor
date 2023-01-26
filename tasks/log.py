@@ -1,12 +1,12 @@
 import logging
 import os
-from ..models import HostLog, Status, PortLog
+from ..models import HostLog, Status, PortLog, Host, Port
 from . import sh
 
 logger = logging.getLogger(__name__)
 
 
-def update_hostlog(host):
+def update_hostlog(host: Host) -> None:
     """Add new host log and remove old logs based on MAX_LOG_LINES"""
     try:
         max_log_lines = os.getenv("MAX_LOG_LINES", 20)
@@ -30,7 +30,7 @@ def update_hostlog(host):
         logger.warning(f"HostLog: {e}")
 
 
-def update_portlog(port):
+def update_portlog(port: Port) -> None:
     """Add new port log and remove old logs based on MAX_LOG_LINES"""
     try:
         max_log_lines = os.getenv("MAX_LOG_LINES", 20)

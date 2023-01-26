@@ -1,12 +1,12 @@
 import logging
 import subprocess
-from ..models import Status
+from ..models import Status, Host
 import os
 
 logger = logging.getLogger(__name__)
 
 
-def ping(host) -> None:
+def ping(host: Host) -> None:
     """Ping host via shell and update status"""
     is_up = not subprocess.call(
         f"ping -4 -c3 -w1 -W5 {host.ipv4} | grep ttl= >/dev/null 2>&1",
