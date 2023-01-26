@@ -1,4 +1,5 @@
 import logging
+import platform
 import subprocess
 from ..models import Status, Host
 import os
@@ -8,10 +9,10 @@ logger = logging.getLogger(__name__)
 
 def ping(host: Host) -> None:
     """Ping host via shell and update status"""
-    is_up = not subprocess.call(
-        f"ping -4 -c3 -w1 -W5 {host.ipv4} | grep ttl= >/dev/null 2>&1",
-        shell=True,
-    )
+    command = f"ping -4 -c3 -w1 -W5 {host.ipv4} | grep ttl= >/dev/null 2>&1"
+    if platform.system().lower() == "windows":
+        command = f"ping -4 -n 1 -w 5 {host.ipv4} >nul 2>&1"
+    is_up = not subprocess.call(command, shell=True)
     if is_up:
         host.status = Status.SUCCESS
         host.status_info = "Up"

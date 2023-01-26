@@ -174,6 +174,7 @@ def telnet(host: Host, command: str) -> list[str]:
                 tn.read_all().decode("ascii").lower().replace("\r", "").split("\n")
             )
     except Exception as e:
-        logger.warning(e)
+        logger.warning("Telnet Error")
+        logger.debug(f"Telnet Error: {e}")
     finally:
         return telnet_output
