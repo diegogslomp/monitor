@@ -52,7 +52,7 @@ class Host(models.Model):
 class Port(models.Model):
     """Ports used to check status using telnet"""
 
-    host = models.ForeignKey("monitor.Host", on_delete=models.CASCADE)
+    host = models.ForeignKey(Host, on_delete=models.CASCADE)
     number = models.CharField(max_length=20)
     is_monitored = models.BooleanField(default=False)
     counter_status = models.IntegerField(
@@ -92,7 +92,7 @@ class Fiber(models.Model):
 class HostLog(models.Model):
     """Host Logs showed in host detail view"""
 
-    host = models.ForeignKey("monitor.Host", on_delete=models.CASCADE)
+    host = models.ForeignKey(Host, on_delete=models.CASCADE)
     status = models.IntegerField(choices=Status.STATUS_CHOICES, default=Status.DEFAULT)
     status_change = models.DateTimeField()
     status_info = models.CharField(max_length=200, blank=True, default="")
@@ -104,8 +104,8 @@ class HostLog(models.Model):
 class PortLog(models.Model):
     """Port Logs showed in host detail view"""
 
-    port = models.ForeignKey("monitor.Port", on_delete=models.CASCADE, null=True)
-    host = models.ForeignKey("monitor.Host", on_delete=models.CASCADE, null=True)
+    port = models.ForeignKey(Port, on_delete=models.CASCADE, null=True)
+    host = models.ForeignKey(Host, on_delete=models.CASCADE, null=True)
     counter_status = models.IntegerField(
         choices=Status.STATUS_CHOICES, default=Status.DEFAULT
     )
