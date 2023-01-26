@@ -1,5 +1,7 @@
 from django.core.management.base import BaseCommand
-from monitor.models import Host, Telnet, Status
+from monitor.models import Host
+from monitor.models import Status
+from monitor.tasks import telnet
 import logging
 import sys
 
@@ -10,10 +12,9 @@ class Command(BaseCommand):
     help = "Show gateways from all hosts"
 
     def main(self):
-
         for host in Host.objects.all():
             if host.status == Status.SUCCESS:
-                gateway = str(Telnet.telnet_gateway(host))
+                gateway = str(telnet.telnet_gateway(host))
                 sys.stdout.write(f"{host.ipv4:15} - {gateway:15} - {host.name}\n")
 
     def handle(self, *args, **options):

@@ -1,22 +1,23 @@
 from django.core.management.base import BaseCommand
-from monitor.models import Host, Telnet
+from monitor.models import Host
+from monitor.tasks import telnet
 import time
 import logging
 
 
 class Command(BaseCommand):
-    args = ''
+    args = ""
     logger = logging.getLogger(__name__)
-    help = 'Monitor Port Errors from Hosts'
+    help = "Monitor Port Errors from Hosts"
 
     def loop(self):
         while True:
             for host in Host.objects.all():
-                Telnet.telnet_port_counters(host)
+                telnet.telnet_port_counters(host)
                 time.sleep(1)
-                Telnet.telnet_switch_manager(host)
+                telnet.telnet_switch_manager(host)
                 time.sleep(1)
 
     def handle(self, *args, **options):
-        self.logger.info('Portcounterd started')
+        self.logger.info("Portcounterd started")
         self.loop()

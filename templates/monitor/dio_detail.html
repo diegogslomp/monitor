@@ -26,21 +26,21 @@
 
       <table class="ui fixed single line very compact selectable striped table">
         <tbody>
-          {% if fibra_list.count > 0 %}
+          {% if fiber_list.count > 0 %}
           <thead>
             <td class="three column wide"><strong>DIO Port</strong></td>
             <td class="three column wide"><strong>Switch Port</strong></td>
             <td><strong>Description</strong></td>
           </thead>
-          {% for fibra in fibra_list %}
+          {% for fiber in fiber_list %}
           <tr>
-            <td>{{ fibra.number }}</td>
-            <td>{{ fibra.port }}</td>
-            <td>{{ fibra.description }}</td>
+            <td>{{ fiber.number }}</td>
+            <td>{{ fiber.port }}</td>
+            <td>{{ fiber.description }}</td>
           </tr>
           {% endfor %} {% else %}
           <tr>
-            <td><span>No fibra port registered yet</span></td>
+            <td><span>No fiber port registered yet</span></td>
           </tr>
           {% endif %}
         </tbody>
