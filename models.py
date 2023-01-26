@@ -210,7 +210,7 @@ class Telnet:
             return telnet_output
 
 
-class Status(models.Model):
+class Status():
     DEFAULT = 0
     SUCCESS = 1
     INFO = 2
