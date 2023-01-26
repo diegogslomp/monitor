@@ -119,10 +119,10 @@ class Telnet:
                     old_counter_status = port_object.counter_status
                     delta_1_day = now - datetime.timedelta(days=1)
                     if port_object.counter_last_change <= delta_1_day:
-                        port_object.counter_status = host.WARNING
+                        port_object.counter_status = Status.WARNING
                     delta_5_days = now - datetime.timedelta(days=5)
                     if port_object.counter_last_change <= delta_5_days:
-                        port_object.counter_status = host.SUCCESS
+                        port_object.counter_status = Status.SUCCESS
                     if old_counter_status != port_object.counter_status:
                         update_fields.extend(["counter_status"])
                 if len(update_fields) > 0:
@@ -180,7 +180,7 @@ class Telnet:
             password = os.getenv("TELNET_PASSWORD", "")
 
             with telnetlib.Telnet(host.ipv4, timeout=timeout) as tn:
-                logger.debug("Telnet: Connection started")
+                logger.debug("Telnet connection started")
                 tn.read_until(b"Username:", timeout=timeout)
                 tn.write(user.encode("ascii") + b"\n")
                 tn.read_until(b"Password:", timeout=timeout)
@@ -189,17 +189,17 @@ class Telnet:
                 # '->' for successful login or 'Username' for wrong credentials
                 matched_object = tn.expect([b"->", b"Username:"], timeout=timeout)
                 if not matched_object[1]:
-                    raise ValueError("Telnet: Empty expect return")
+                    raise ValueError("Telnet empty expect return")
 
                 expected_match = matched_object[1].group(0)
                 logger.debug(f"Telnet match: {expected_match}")
                 if expected_match == b"Username:":
-                    raise PermissionError("Telnet: Invalid credentials")
+                    raise PermissionError("Telnet invalid credentials")
 
                 logger.debug(f"Telnet command: {command}")
                 tn.write(command.encode("ascii") + b"\n")
                 tn.write(b"exit\n")
-                logger.debug("Telnet: Connection finished")
+                logger.debug("Telnet connection finished")
 
                 telnet_output = (
                     tn.read_all().decode("ascii").lower().replace("\r", "").split("\n")
@@ -208,6 +208,7 @@ class Telnet:
             logger.warning(e)
         finally:
             return telnet_output
+
 
 class Status(models.Model):
     DEFAULT = 0
@@ -222,6 +223,7 @@ class Status(models.Model):
         (WARNING, "warning"),
         (DANGER, "negative"),
     )
+
 
 class Host(models.Model):
     name = models.CharField(max_length=200)
