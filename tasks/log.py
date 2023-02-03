@@ -22,7 +22,7 @@ def update_hostlog(host: Host) -> None:
             .values_list("pk")[max_log_lines:]
         ).delete()
 
-        icon = "\u2705" if host.status < Status.WARNING else "\u274C"
+        icon = "🟢" if host.status < Status.WARNING else "🔴"
         message = f"{icon} {host.name} - {host.status_info}"
         sh.send_telegram_message(message)
 
