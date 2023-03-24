@@ -20,7 +20,7 @@
       </td>
       <td class="selectable">
         <a href="{% url 'monitor:host_detail' host.id %}">
-          {% if host.status < host.WARNING %}
+          {% if host.status < status.WARNING %}
           <i class="check icon"></i>
           {% else %}
           <i class="x icon"></i>

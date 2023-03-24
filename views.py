@@ -1,5 +1,5 @@
 from django.views.generic import ListView, TemplateView
-from .models import Host, Port, PortLog, Dio, Fiber
+from .models import Host, Port, PortLog, Dio, Fiber, Status
 
 
 class IndexView(TemplateView):
@@ -13,6 +13,10 @@ class HostListView(ListView):
     def get_queryset(self):
         return Host.objects.all().order_by("-status", "-last_status_change")
 
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["status"] = Status
+        return context
 
 class HostDetailView(TemplateView):
     template_name = "monitor/host_detail.html"
