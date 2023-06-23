@@ -15,7 +15,6 @@ def check_and_update(host: Host) -> None:
     # Only update changed fields in DB
     update_fields = ["last_check"]
     # Store old data before change it
-    old_status = host.status
     old_status_info = host.status_info
     sh.ping(host)
     telnet.telnet_monitored_ports(host)
@@ -47,7 +46,4 @@ def check_and_update(host: Host) -> None:
                 host.status = Status.WARNING
                 update_fields.extend(["status"])
     # Save only if the host was not deleted while in buffer
-    try:
-        host.save(update_fields=update_fields)
-    except Exception as e:
-        logger.warning(e)
+    host.save(update_fields=update_fields)

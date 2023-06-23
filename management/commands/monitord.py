@@ -9,11 +9,12 @@ class Command(BaseCommand):
     logger = logging.getLogger(__name__)
     help = "Monitor Daemon for Monitor hosts"
 
-    def loop(self):
-        while True:
-            for host in Host.objects.all():
-                check_and_update(host)
-
     def handle(self, *args, **options):
         self.logger.info("Monitord started")
-        self.loop()
+        while True:
+            for host in Host.objects.all():
+                try:
+                    check_and_update(host)
+                except Exception as e:
+                    self.logger.warning(f"Error checking {host}")
+                    self.logger.debug(e)

@@ -49,9 +49,6 @@ def telnet_port_counters(host: Host) -> None:
     port_object = None
     telnet_output = telnet(host, "show port counters")
 
-    if not telnet_output:
-        return
-
     for line in telnet_output:
         # Create port if not exists
         if re.search(r"^port:", line):
@@ -107,8 +104,6 @@ def telnet_gateway(host: Host) -> str:
     """Filter gateway from telnet output"""
 
     telnet_output = telnet(host, "show ip route")
-    if not telnet_output:
-        return
 
     for line in telnet_output:
         if re.search(r"0.0.0.0", line):
@@ -126,8 +121,6 @@ def telnet_switch_manager(host: Host) -> None:
     """Get switch manager number"""
 
     telnet_output = telnet(host, "show switch")
-    if not telnet_output:
-        return
 
     for line in telnet_output:
         if re.search(r"[M,m]gmt", line):
@@ -140,41 +133,35 @@ def telnet_switch_manager(host: Host) -> None:
 
 def telnet(host: Host, command: str) -> list[str]:
     """Telnet connection and get registered ports status"""
-    telnet_output = []
-    try:
-        assert host.status == Status.SUCCESS
 
-        timeout = os.getenv("TELNET_TIMEOUT", 5)
-        user = os.getenv("TELNET_USER", "admin")
-        password = os.getenv("TELNET_PASSWORD", "")
+    assert host.status == Status.SUCCESS
 
-        with telnetlib.Telnet(host.ipv4, timeout=timeout) as tn:
-            logger.debug("Telnet connection started")
-            tn.read_until(b"Username:", timeout=timeout)
-            tn.write(user.encode("ascii") + b"\n")
-            tn.read_until(b"Password:", timeout=timeout)
-            tn.write(password.encode("ascii") + b"\n")
+    timeout = os.getenv("TELNET_TIMEOUT", 5)
+    user = os.getenv("TELNET_USER", "admin")
+    password = os.getenv("TELNET_PASSWORD", "")
 
-            # '->' for successful login or 'Username' for wrong credentials
-            matched_object = tn.expect([b"->", b"Username:"], timeout=timeout)
-            if not matched_object[1]:
-                raise ValueError("Telnet empty expect return")
+    with telnetlib.Telnet(host.ipv4, timeout=timeout) as tn:
+        logger.debug(f"Telnet connection started on {host}")
+        tn.read_until(b"Username:", timeout=timeout)
+        tn.write(user.encode("ascii") + b"\n")
+        tn.read_until(b"Password:", timeout=timeout)
+        tn.write(password.encode("ascii") + b"\n")
 
-            expected_match = matched_object[1].group(0)
-            logger.debug(f"Telnet match: {expected_match}")
-            if expected_match == b"Username:":
-                raise PermissionError("Telnet invalid credentials")
+        # '->' for successful login or 'Username' for wrong credentials
+        matched_object = tn.expect([b"->", b"Username:"], timeout=timeout)
+        if not matched_object[1]:
+            raise ValueError("Telnet empty expect return")
 
-            logger.debug(f"Telnet command: {command}")
-            tn.write(command.encode("ascii") + b"\n")
-            tn.write(b"exit\n")
-            logger.debug("Telnet connection finished")
+        expected_match = matched_object[1].group(0)
+        logger.debug(f"Telnet match: {expected_match}")
+        if expected_match == b"Username:":
+            raise PermissionError("Telnet invalid credentials")
 
-            telnet_output = (
-                tn.read_all().decode("ascii").lower().replace("\r", "").split("\n")
-            )
-    except Exception as e:
-        logger.warning(f"Telnet Error: {host.ipv4} - {host.name}")
-        logger.debug(f"Telnet Error: {e}")
-    finally:
+        logger.debug(f"Telnet command: {command}")
+        tn.write(command.encode("ascii") + b"\n")
+        tn.write(b"exit\n")
+        logger.debug(f"Telnet connection finished on {host}")
+        telnet_output = (
+            tn.read_all().decode("ascii").lower().replace("\r", "").split("\n")
+        )
         return telnet_output

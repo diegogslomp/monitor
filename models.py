@@ -1,8 +1,5 @@
 from django.db import models
 from django.utils import timezone
-import logging
-
-logger = logging.getLogger(__name__)
 
 
 class Status:

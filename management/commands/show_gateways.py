@@ -11,12 +11,13 @@ class Command(BaseCommand):
     logger = logging.getLogger(__name__)
     help = "Show gateways from all hosts"
 
-    def main(self):
-        for host in Host.objects.all():
-            if host.status == Status.SUCCESS:
-                gateway = str(telnet.telnet_gateway(host))
-                sys.stdout.write(f"{host.ipv4:15} - {gateway:15} - {host.name}\n")
-
     def handle(self, *args, **options):
         self.logger.info("Show gateways started")
-        self.main()
+        for host in Host.objects.all():
+            if host.status == Status.SUCCESS:
+                try:
+                    gateway = str(telnet.telnet_gateway(host))
+                    sys.stdout.write(f"{host.ipv4:15} - {gateway:15} - {host.name}\n")
+                except Exception as e:
+                    self.logger.warning(f"Error reading {host} gateway")
+                    self.logger.debug(e)
