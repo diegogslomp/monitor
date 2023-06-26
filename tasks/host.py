@@ -17,7 +17,8 @@ def check_and_update(host: Host) -> None:
     # Store old data before change it
     old_status_info = host.status_info
     sh.ping(host)
-    telnet.telnet_monitored_ports(host)
+    if host.status == Status.SUCCESS:
+        telnet.telnet_monitored_ports(host)
     # Update log only if retries reach max_retires
     if host.status == Status.DANGER and host.retries < host.max_retries:
         host.retries += 1

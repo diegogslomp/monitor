@@ -16,10 +16,12 @@ def telnet_monitored_ports(host: Host) -> None:
     if host.monitored_ports.count() <= 0:
         return
 
-    ports = ";".join([port.number for port in host.monitored_ports])
-    show_port_status = f"show port status {ports}"
-    telnet_output = telnet(host, show_port_status)
-    if not telnet_output:
+    telnet_output = []
+    try:
+        ports = ";".join([port.number for port in host.monitored_ports])
+        show_port_status = f"show port status {ports}"
+        telnet_output = telnet(host, show_port_status)
+    except Exception:
         host.status = Status.DANGER
         host.status_info = "Can't get port status"
         logger.warning(host.status_info)
@@ -133,8 +135,6 @@ def telnet_switch_manager(host: Host) -> None:
 
 def telnet(host: Host, command: str) -> list[str]:
     """Telnet connection and get registered ports status"""
-
-    assert host.status == Status.SUCCESS
 
     timeout = os.getenv("TELNET_TIMEOUT", 5)
     user = os.getenv("TELNET_USER", "admin")
