@@ -150,12 +150,11 @@ def telnet(host: Host, command: str) -> list[str]:
         # '->' for successful login or 'Username' for wrong credentials
         matched_object = tn.expect([b"->", b"Username:"], timeout=timeout)
         if not matched_object[1]:
-            raise ValueError("Telnet empty expect return")
+            raise ValueError("Expect telnet command returned empty")
 
         expected_match = matched_object[1].group(0)
-        logger.debug(f"Telnet match: {expected_match}")
         if expected_match == b"Username:":
-            raise PermissionError("Telnet invalid credentials")
+            raise PermissionError("Invalid telnet credentials")
 
         logger.debug(f"Telnet command: {command}")
         tn.write(command.encode("ascii") + b"\n")
