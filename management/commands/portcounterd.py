@@ -21,6 +21,6 @@ class Command(BaseCommand):
                         telnet.telnet_switch_manager(host)
                         time.sleep(1)
                 except Exception as e:
-                    self.logger.warning(f"Error reading {host} counters/manager")
+                    self.logger.warning(f"Error checking {host} port counters/manager")
                     self.logger.debug(e)
 

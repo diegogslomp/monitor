@@ -10,20 +10,23 @@ logger = logging.getLogger(__name__)
 
 def check_and_update(host: Host) -> None:
     """The 'main' function of monitord, check/update host and logs"""
+
     now = timezone.now()
     host.last_check = now
+
     # Only update changed fields in DB
     update_fields = ["last_check"]
-    # Store old data before change it
     old_status_info = host.status_info
+
     sh.ping(host)
     if host.status == Status.SUCCESS:
         telnet.telnet_monitored_ports(host)
+
     # Update log only if retries reach max_retires
     if host.status == Status.DANGER and host.retries < host.max_retries:
         host.retries += 1
         update_fields.extend(["retries"])
-        logger.warning(f"{host.ipv4}: {host.retries}/{host.max_retries} retry")
+        logger.warning(f"{host} {host.retries}/{host.max_retries} retry")
     else:
         # if online, reset retries
         if host.status == Status.SUCCESS:
@@ -32,7 +35,7 @@ def check_and_update(host: Host) -> None:
         # if status info changed, update status and logs
         if old_status_info != host.status_info:
             logger.debug(
-                f'{host.ipv4}: Status info changed from "{old_status_info}" to "{host.status_info}"'
+                f'{host} info changed from "{old_status_info}" to "{host.status_info}"'
             )
             host.last_status_change = now
             update_fields.extend(["last_status_change", "status", "status_info"])
