@@ -24,14 +24,14 @@ def telnet_monitored_ports(host: Host) -> None:
     except Exception:
         host.status = Status.DANGER
         host.status_info = "Can't get port status"
-        logger.warning(host.status_info)
+        logger.warning(f"Can't get {host} port status")
         return
 
     for line in telnet_output:
         if re.search(r"[no ,in]valid", line):
             host.status = Status.DANGER
-            host.status_info = "Invalid port registered or module is Down"
-            logger.warning(host.status_info)
+            host.status_info = f"Invalid port or module is Down"
+            logger.warning(f"Invalid {host} port or module is down")
             continue
         for port in host.monitored_ports:
             if re.search(r"{} .*down".format(port.number), line):
