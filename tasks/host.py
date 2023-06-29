@@ -37,10 +37,10 @@ def check_and_update(host: Host) -> None:
             logger.warning(msg)
 
         days_to_warning = os.getenv("DAYS_FROM_DANGER_TO_WARNING", 5)
-        day_to_change_to_warning = now - datetime.timedelta(days=days_to_warning)
+        warning_date = now - datetime.timedelta(days=days_to_warning)
 
         # Update status to warning if is offline for x days
-        if host.last_status_change > day_to_change_to_warning:
+        if host.last_status_change < warning_date:
             host.status = Status.WARNING
             update_fields.extend(["status"])
 
