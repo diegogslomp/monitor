@@ -9,51 +9,45 @@ logger = logging.getLogger(__name__)
 
 
 def check_and_update(host: Host) -> None:
-    """Monitord main function, check/update host and logs"""
+    """The 'main' function of monitord, check/update host and logs"""
 
-    old_status_info = host.status_info
     now = timezone.now()
     host.last_check = now
 
-    # Fields that will be updated on database
+    # Only update changed fields in DB
     update_fields = ["last_check"]
+    old_status_info = host.status_info
 
     sh.ping(host)
     if host.status == Status.SUCCESS:
         telnet.telnet_monitored_ports(host)
 
-    # Reset retries if host is back online
-    if host.status == Status.SUCCESS:
-        if host.retries != 0:
+    # Update log only if retries reach max_retires
+    if host.status == Status.DANGER and host.retries < host.max_retries:
+        host.retries += 1
+        update_fields.extend(["retries"])
+        logger.warning(f"{host} {host.retries}/{host.max_retries} retry")
+    else:
+        # if online, reset retries
+        if host.status == Status.SUCCESS:
             host.retries = 0
             update_fields.extend(["retries"])
-
-    else:
-        # Update status only if is offline and exceeded max_retries
-        if host.retries < host.max_retries:
-            host.retries += 1
-            update_fields.extend(["retries"])
-            msg = f"{host} {host.retries}/{host.max_retries} retry"
-            logger.warning(msg)
-
-        days_to_warning = os.getenv("DAYS_FROM_DANGER_TO_WARNING", 5)
-        warning_date = now - datetime.timedelta(days=days_to_warning)
-
-        # Update status to warning if is offline for x days
-        if host.last_status_change < warning_date:
-            host.status = Status.WARNING
-            update_fields.extend(["status"])
-
-    # Update info and create hostlog
-    if host.status_info != old_status_info:
-        msg = f"{host} info changed from {old_status_info} to {host.status_info}"
-        logger.debug(msg)
-        log.update_hostlog(host)
-        update_fields.extend(["status_info"])
-
-        # Don't update last_status_change for warning status
-        if host.status != Status.WARNING:
+        # if status info changed, update status and logs
+        if old_status_info != host.status_info:
+            logger.debug(
+                f'{host} info changed from "{old_status_info}" to "{host.status_info}"'
+            )
             host.last_status_change = now
-            update_fields.extend(["status", "last_status_change"])
-
+            update_fields.extend(["last_status_change", "status", "status_info"])
+            log.update_hostlog(host)
+        # check if change the status from danger to warning status
+        elif host.status == Status.DANGER:
+            days_to_warning = os.getenv("DAYS_FROM_DANGER_TO_WARNING", 5)
+            delta_limit_to_warning_status = now - datetime.timedelta(
+                days=days_to_warning
+            )
+            if host.last_status_change <= delta_limit_to_warning_status:
+                host.status = Status.WARNING
+                update_fields.extend(["status"])
+    # Save only if the host was not deleted while in buffer
     host.save(update_fields=update_fields)
