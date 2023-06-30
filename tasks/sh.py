@@ -30,12 +30,11 @@ def send_telegram_message(message: str) -> None:
 
     if not token or not chat_id:
         message = "Telegram: Empty TELEGRAM_TOKEN and TELEGRAM_CHAT_ID"
-        logger.warning(message)
+        logger.debug(message)
         return
 
-    url = f"https://api.telegram.org/bot{token}/sendMessage"
-
     logger.info(f"Telegram: {message}")
+    url = f"https://api.telegram.org/bot{token}/sendMessage"
 
     subprocess.call(
         f'curl -s -X POST {url} -d chat_id={chat_id} -d text="{message}" >/dev/null',

@@ -27,11 +27,14 @@ def check_and_update(host: Host) -> None:
         host.retries += 1
         update_fields.extend(["retries"])
         logger.warning(f"{host} {host.retries}/{host.max_retries} retry")
+
     else:
         # if online, reset retries
         if host.status == Status.SUCCESS:
-            host.retries = 0
-            update_fields.extend(["retries"])
+            if host.retries != 0:
+                host.retries = 0
+                update_fields.extend(["retries"])
+
         # if status info changed, update status and logs
         if old_status_info != host.status_info:
             logger.debug(
@@ -40,14 +43,15 @@ def check_and_update(host: Host) -> None:
             host.last_status_change = now
             update_fields.extend(["last_status_change", "status", "status_info"])
             log.update_hostlog(host)
+
         # check if change the status from danger to warning status
         elif host.status == Status.DANGER:
             days_to_warning = os.getenv("DAYS_FROM_DANGER_TO_WARNING", 5)
-            delta_limit_to_warning_status = now - datetime.timedelta(
-                days=days_to_warning
-            )
-            if host.last_status_change <= delta_limit_to_warning_status:
+            delta_to_warning_status = now - datetime.timedelta(days=days_to_warning)
+
+            if host.last_status_change < delta_to_warning_status:
                 host.status = Status.WARNING
                 update_fields.extend(["status"])
+
     # Save only if the host was not deleted while in buffer
     host.save(update_fields=update_fields)
