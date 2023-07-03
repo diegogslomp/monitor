@@ -38,7 +38,7 @@ def check_and_update(host: Host) -> None:
         # Update status and logs if status info changed
         if old_status_info != host.status_info:
             msg = f'{host} changed from "{old_status_info}" to "{host.status_info}"'
-            logger.debug(msg)
+            logger.info(msg)
             host.last_status_change = now
             update_fields.extend(["last_status_change", "status", "status_info"])
             log.update_hostlog(host)
