@@ -21,7 +21,9 @@ def update_hostlog(host: Host) -> None:
 
     icon = "🟢" if host.status < Status.WARNING else "🔴"
     message = f"{icon} {host.name} - {host.status_info}"
-    sh.send_telegram_message(message)
+    send_telegram = bool(os.getenv("ENABLE_TELEGRAM", False))
+    if send_telegram:
+        sh.send_telegram_message(message)
 
 
 def update_portlog(port: Port) -> None:
