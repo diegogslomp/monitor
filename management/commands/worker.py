@@ -6,6 +6,18 @@ import time
 import os
 
 
+async def handle_queue_forever(q: Queue, model: Model):
+    while True:
+        for item in model.objects.all():
+            await q.put(item)
+
+        started_at = time.monotonic()
+        await q.join()
+        completed_at = time.monotonic() - started_at
+
+        logging.debug(f"Loop completed in {completed_at:.2f} seconds")
+
+
 async def worker(name: str, q: Queue, task) -> None:
     while True:
         item = await q.get()
@@ -21,14 +33,7 @@ async def main(model: Model, task) -> None:
     q = Queue()
     workers = int(os.getenv("WORKERS", 2))
 
-    while True:
-        for item in model.objects.all():
-            await q.put(item)
+    for i in range(workers):
+        asyncio.create_task(worker(f"Worker-{i+1}", q, task))
 
-        for i in range(workers):
-            asyncio.create_task(worker(f"Worker-{i}", q, task))
-
-        started_at = time.monotonic()
-        await q.join()
-        completed_at = time.monotonic() - started_at
-        logging.debug(f"Loop completed in {completed_at:.2f} seconds")
+    await handle_queue_forever(q, model)
