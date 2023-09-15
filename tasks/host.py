@@ -9,7 +9,7 @@ logger = logging.getLogger(__name__)
 
 
 def check_and_update(host: Host) -> None:
-    """The 'main' function of monitord, check/update host and logs"""
+    """Check/update host and logs, monitord main function"""
 
     now = timezone.now()
     host.last_check = now
@@ -27,27 +27,30 @@ def check_and_update(host: Host) -> None:
         host.retries += 1
         update_fields.extend(["retries"])
         logger.warning(f"{host} {host.retries}/{host.max_retries} retry")
+
     else:
-        # if online, reset retries
+        # Reset retries if back online
         if host.status == Status.SUCCESS:
-            host.retries = 0
-            update_fields.extend(["retries"])
-        # if status info changed, update status and logs
+            if host.retries != 0:
+                host.retries = 0
+                update_fields.extend(["retries"])
+
+        # Update status and logs if status info changed
         if old_status_info != host.status_info:
-            logger.debug(
-                f'{host} info changed from "{old_status_info}" to "{host.status_info}"'
-            )
+            msg = f'{host} changed from "{old_status_info}" to "{host.status_info}"'
+            logger.info(msg)
             host.last_status_change = now
             update_fields.extend(["last_status_change", "status", "status_info"])
             log.update_hostlog(host)
-        # check if change the status from danger to warning status
+
+        # Change the status from danger to warning if offline for days
         elif host.status == Status.DANGER:
             days_to_warning = os.getenv("DAYS_FROM_DANGER_TO_WARNING", 5)
-            delta_limit_to_warning_status = now - datetime.timedelta(
-                days=days_to_warning
-            )
-            if host.last_status_change <= delta_limit_to_warning_status:
+            delta_to_warning_status = now - datetime.timedelta(days=days_to_warning)
+
+            if host.last_status_change < delta_to_warning_status:
                 host.status = Status.WARNING
                 update_fields.extend(["status"])
+
     # Save only if the host was not deleted while in buffer
     host.save(update_fields=update_fields)
