@@ -10,7 +10,10 @@ async def worker(name: str, q: Queue, task) -> None:
     while True:
         item = await q.get()
         logging.debug(f"{name} working on {item}")
-        await task(item)
+
+        loop = asyncio.get_event_loop()
+        await loop.run_in_executor(None, task, item)
+
         q.task_done()
 
 

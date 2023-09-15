@@ -4,12 +4,12 @@ from monitor.tasks.host import check_and_update
 from monitor.models import Host
 import asyncio
 import logging
+import time
 
-
-async def task(host: Host) -> None:
+def task(host: Host) -> None:
     try:
         check_and_update(host)
-        await asyncio.sleep(1)
+        time.sleep(1)
     except Exception as e:
         logging.warning(f"Error checking {host}")
         logging.debug(e)
