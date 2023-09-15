@@ -1,20 +1,24 @@
 from django.core.management.base import BaseCommand
-from monitor.models import Host
+from monitor.management.commands import worker
 from monitor.tasks.host import check_and_update
+from monitor.models import Host
+import asyncio
 import logging
+import time
+
+def task(host: Host) -> None:
+    try:
+        check_and_update(host)
+        time.sleep(1)
+    except Exception as e:
+        logging.warning(f"Error checking {host}")
+        logging.debug(e)
 
 
 class Command(BaseCommand):
     args = ""
-    logger = logging.getLogger(__name__)
     help = "Monitor Daemon for Monitor hosts"
 
     def handle(self, *args, **options):
-        self.logger.info("Monitord started")
-        while True:
-            for host in Host.objects.all():
-                try:
-                    check_and_update(host)
-                except Exception as e:
-                    self.logger.warning(f"Error checking {host}")
-                    self.logger.debug(e)
+        logging.info("Monitord started")
+        asyncio.run(worker.main(Host, task))
