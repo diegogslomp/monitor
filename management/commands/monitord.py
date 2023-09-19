@@ -21,4 +21,7 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         logging.info("Monitord started")
-        asyncio.run(worker.main(Host, task))
+        try:
+            asyncio.run(worker.main(Host, task))
+        except (KeyboardInterrupt, SystemExit):
+            pass

@@ -6,6 +6,7 @@ import asyncio
 import logging
 import time
 
+
 def task(host: Host) -> None:
     try:
         if host.status is not Status.SUCCESS:
@@ -25,4 +26,7 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         logging.info("Portcounterd started")
-        asyncio.run(worker.main(Host, task))
+        try:
+            asyncio.run(worker.main(Host, task))
+        except (KeyboardInterrupt, SystemExit):
+            pass
