@@ -6,22 +6,22 @@ import logging
 import os
 
 
-async def handle_queue_forever(q: Queue, model: Model) -> None:
+async def handle_queue_forever(queue: Queue, model: Model) -> None:
     while True:
         for item in model.objects.all():
-            q.put_nowait(item)
-        await q.join()
+            queue.put_nowait(item)
+        await queue.join()
 
 
-async def do_work(q: Queue, task: callable) -> None:
+async def do_work(queue: Queue, task: callable) -> None:
     while True:
-        item = await q.get()
+        item = await queue.get()
         if inspect.iscoroutinefunction(task):
             await task(item)
         else:
             loop = asyncio.get_event_loop()
             await loop.run_in_executor(None, task, item)
-        q.task_done()
+        queue.task_done()
 
 
 async def main(model: Model, task: callable) -> None:
