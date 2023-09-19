@@ -26,16 +26,16 @@ async def do_work(q: Queue, task: callable) -> None:
 
 async def main(model: Model, task: callable) -> None:
     workers = []
+    queue = Queue()
     num_of_workers = int(os.getenv("WORKERS", 3))
+
+    for _ in range(num_of_workers):
+        workers.append(asyncio.create_task(do_work(queue, task)))
+
     try:
-        q = Queue()
-        for _ in range(num_of_workers):
-            workers.append(asyncio.create_task(do_work(q, task)))
-        await handle_queue_forever(q, model)
+        await handle_queue_forever(queue, model)
     finally:
-        if not workers:
-            return
-        for worker in workers:
-            worker.cancel()
-        await asyncio.gather(*workers, return_exceptions=True)
-        logging.debug(f"workers dismissed")
+        if workers:
+            [worker.cancel() for worker in workers]
+            await asyncio.gather(*workers, return_exceptions=True)
+            logging.debug(f"workers dismissed")
