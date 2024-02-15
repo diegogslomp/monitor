@@ -110,7 +110,7 @@ def telnet_gateway(host: Host) -> str:
     for line in telnet_output:
         if re.search(r"0.0.0.0", line):
             logger.debug(f"Telnet gateway line: {line}")
-            if re.search("^\s*s", line):
+            if re.search(r"^\s*s", line):
                 position = 4
             else:
                 position = 1
