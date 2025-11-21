@@ -2,9 +2,9 @@ from django.core.management.base import BaseCommand
 from monitor.management.commands import worker
 from monitor.tasks.host import check_and_update
 from monitor.models import Host
-import asyncio
 import logging
 import time
+
 
 def task(host: Host) -> None:
     try:
@@ -21,7 +21,4 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         logging.info("Monitord started")
-        try:
-            asyncio.run(worker.main(Host, task))
-        except (KeyboardInterrupt, SystemExit):
-            pass
+        worker.main(model=Host, task=task)

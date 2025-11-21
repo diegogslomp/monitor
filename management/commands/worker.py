@@ -5,17 +5,22 @@ import inspect
 import logging
 import os
 
+queue = Queue()
 
-async def handle_queue_forever(queue: Queue, model: Model) -> None:
+
+async def queue_feeder(model: Model) -> None:
+    global queue
     while True:
         for item in model.objects.all():
             queue.put_nowait(item)
         await queue.join()
 
 
-async def do_work(queue: Queue, task: callable) -> None:
+async def run_task_for_each_queue_item(task: callable) -> None:
+    global queue
     while True:
         item = await queue.get()
+        # Run async or sync task
         if inspect.iscoroutinefunction(task):
             await task(item)
         else:
@@ -24,18 +29,25 @@ async def do_work(queue: Queue, task: callable) -> None:
         queue.task_done()
 
 
-async def main(model: Model, task: callable) -> None:
+async def run_workers(model: Model, task: callable) -> None:
     workers = []
-    queue = Queue()
     num_of_workers = int(os.getenv("WORKERS", 3))
 
     for _ in range(num_of_workers):
-        workers.append(asyncio.create_task(do_work(queue, task)))
+        workers.append(asyncio.create_task(run_task_for_each_queue_item(task)))
 
     try:
-        await handle_queue_forever(queue, model)
+        await queue_feeder(model)
     finally:
+        # Shutdown workers
         if workers:
             [worker.cancel() for worker in workers]
             await asyncio.gather(*workers, return_exceptions=True)
             logging.debug(f"workers dismissed")
+
+
+def main(model: Model, task: callable):
+    try:
+        asyncio.run(run_workers(model=model, task=task))
+    except (KeyboardInterrupt, SystemExit):
+        pass
