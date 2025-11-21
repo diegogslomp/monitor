@@ -5,19 +5,15 @@ import inspect
 import logging
 import os
 
-queue = Queue()
 
-
-async def queue_feeder(model: Model) -> None:
-    global queue
+async def queue_feeder(queue: Queue, model: Model) -> None:
     while True:
         for item in model.objects.all():
             queue.put_nowait(item)
         await queue.join()
 
 
-async def run_task_for_each_queue_item(task: callable) -> None:
-    global queue
+async def run_work(queue: Queue, task: callable) -> None:
     while True:
         item = await queue.get()
         # Run async or sync task
@@ -30,24 +26,16 @@ async def run_task_for_each_queue_item(task: callable) -> None:
 
 
 async def run_workers(model: Model, task: callable) -> None:
-    workers = []
+    queue = Queue()
     num_of_workers = int(os.getenv("WORKERS", 3))
-
+    workers = []
     for _ in range(num_of_workers):
-        workers.append(asyncio.create_task(run_task_for_each_queue_item(task)))
-
+        workers.append(asyncio.create_task(run_work(queue=queue, task=task)))
     try:
-        await queue_feeder(model)
+        await queue_feeder(queue=queue, model=model)
     finally:
         # Shutdown workers
         if workers:
             [worker.cancel() for worker in workers]
             await asyncio.gather(*workers, return_exceptions=True)
-            logging.debug(f"workers dismissed")
-
-
-def main(model: Model, task: callable):
-    try:
-        asyncio.run(run_workers(model=model, task=task))
-    except (KeyboardInterrupt, SystemExit):
-        pass
+            logging.debug(f"Workers dismissed")

@@ -1,5 +1,5 @@
 from django.core.management.base import BaseCommand
-from monitor.management.commands import worker
+from monitor.management.commands.worker import run_workers
 from monitor.tasks.host import check_and_update
 from monitor.models import Host
 import logging
@@ -21,4 +21,7 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         logging.info("Monitord started")
-        worker.main(model=Host, task=task)
+        try:
+            run_workers(model=Host, task=task)
+        except (KeyboardInterrupt, SystemExit):
+            pass
