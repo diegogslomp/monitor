@@ -9,10 +9,11 @@ import time
 def task(host: Host) -> None:
     try:
         check_and_update(host)
-        time.sleep(1)
     except Exception as e:
         logging.warning(f"Error checking {host}")
         logging.debug(e)
+    finally:
+        time.sleep(1)
 
 
 class Command(BaseCommand):
