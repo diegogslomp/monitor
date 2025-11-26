@@ -1,5 +1,5 @@
 from django.db.models import Model
-from asyncio import Queue, TaskGroup
+from asyncio import Queue
 import asyncio
 import inspect
 
@@ -11,7 +11,7 @@ async def queue_feeder(queue: Queue, model: Model) -> None:
         await queue.join()
 
 
-async def run_work(queue: Queue, task: callable) -> None:
+async def run_worker(queue: Queue, task: callable) -> None:
     while True:
         item = await queue.get()
         # Run async or sync task
@@ -25,7 +25,6 @@ async def run_work(queue: Queue, task: callable) -> None:
 
 async def run_workers(model: Model, task: callable, num_of_workers=3) -> None:
     queue = Queue()
-    async with TaskGroup as workers:
-        for _ in range(num_of_workers):
-            workers.create_task(run_work(queue=queue, task=task))
-        await queue_feeder(queue=queue, model=model)
+    for _ in range(num_of_workers):
+        asyncio.create_task(run_worker(queue=queue, task=task))
+    await queue_feeder(queue=queue, model=model)
