@@ -1,7 +1,6 @@
 from django.core.management.base import BaseCommand
 from monitor.models import Host, Status
-from monitor.tasks import telnet
-from monitor.management.commands import worker
+from monitor.tasks import telnet, worker
 import asyncio
 import logging
 import time

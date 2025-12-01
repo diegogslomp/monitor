@@ -1,5 +1,5 @@
 from django.core.management.base import BaseCommand
-from monitor.management.commands import worker
+from monitor.tasks import worker
 from monitor.tasks.host import check_and_update
 from monitor.models import Host
 import logging
