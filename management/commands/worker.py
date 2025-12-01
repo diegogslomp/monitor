@@ -1,4 +1,5 @@
 from django.db.models import Model
+from monitor.models import Host
 from asyncio import Queue
 import asyncio
 import inspect
@@ -28,3 +29,7 @@ async def run_workers(model: Model, task: callable, num_of_workers=3) -> None:
     for _ in range(num_of_workers):
         asyncio.create_task(run_worker(queue=queue, task=task))
     await queue_feeder(queue=queue, model=model)
+
+
+def run(model: Host, task: callable):
+    asyncio.run(run_workers(model=model, task=task))
